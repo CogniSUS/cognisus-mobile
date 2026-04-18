@@ -11,6 +11,13 @@ export default function HomePage() {
       </Text>
 
       <Pressable
+        style={[styles.button, styles.secondaryButton]}
+        onPress={() => router.push("/login")}
+      >
+        <Text style={styles.secondaryButtonText}>login</Text>
+      </Pressable>
+
+      <Pressable
         style={[styles.button, styles.primaryButton]}
         onPress={() => router.push("/patients")}
       >
