@@ -10,6 +10,13 @@ export default function HomePage() {
         Aplicativo de triagem cognitiva
       </Text>
 
+        <Pressable
+        style={[styles.button, styles.primaryButton]}
+        onPress={() => router.push("/cadastro")}
+      >
+        <Text style={styles.primaryButtonText}>cadastro</Text>
+      </Pressable>
+
       <Pressable
         style={[styles.button, styles.primaryButton]}
         onPress={() => router.push("/patients")}
