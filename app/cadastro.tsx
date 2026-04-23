@@ -24,6 +24,10 @@ export default function Cadastro(){
             setLoading(false)
             return Alert.alert("Erro", "Email inválido")
         }
+        else if (cpf.length != 11) {
+          setLoading(false)
+          return Alert.alert("Erro", "CPF deve conter exatamente 11 dígitos")
+        }
         else if (password.length < 6) {
             setLoading(false)
             return Alert.alert("Erro", "Senha deve ter pelo menos 6 caracteres")
