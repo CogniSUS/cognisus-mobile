@@ -12,14 +12,16 @@ export default function Login(){
 
     async function getLogin(){
       try{
+        const emailTratado = email.trim().toLowerCase()
+        const passwordTratado = password.trim()
         setLoading(true)
-        if(!email || !password){
+        if(!emailTratado || !passwordTratado){
           setLoading(false)
           return Alert.alert("Atenção", "Informe os campos obrigatórios!")
         }
 
         setTimeout(()=>{
-          if(email == 'cognisus@gmail.com' && password == '123456'){
+          if(emailTratado == 'cognisus@gmail.com' && passwordTratado == '123456'){
             Alert.alert("Login permitido")
             router.push("/")
           }
@@ -48,7 +50,7 @@ export default function Login(){
                 <Text></Text>
                 <View style ={style.boxInput}>
                   <TextInput
-                    placeholder="Email ou usuário"
+                    placeholder="E-mail"
                     style={style.input}
                     value ={email}
                     onChangeText={setEmail}
