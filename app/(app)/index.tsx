@@ -31,27 +31,6 @@ export default function HomePage() {
       <Text style={styles.subtitle}>Aplicativo de triagem cognitiva</Text>
 
       <Pressable
-        style={[styles.button, styles.primaryButton]}
-        onPress={() => router.push("/cadastro")}
-      >
-        <Text style={styles.primaryButtonText}>cadastro</Text>
-      </Pressable>
-
-      <Pressable
-        style={[styles.button, styles.secondaryButton]}
-        onPress={() => router.push("/login")}
-      >
-        <Text style={styles.secondaryButtonText}>login</Text>
-      </Pressable>
-
-      <Pressable
-        style={[styles.button, styles.primaryButton]}
-        onPress={() => router.push("/patients")}
-      >
-        <Text style={styles.primaryButtonText}>Pacientes</Text>
-      </Pressable>
-
-      <Pressable
         style={[styles.button, styles.secondaryButton]}
         onPress={() => router.push("/tests")}
       >
