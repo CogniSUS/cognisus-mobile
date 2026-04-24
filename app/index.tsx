@@ -1,16 +1,36 @@
+import { initDB } from "@/database/database";
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function HomePage() {
+  const [isDbReady, setIsDbReady] = useState(false);
+
+  useEffect(() => {
+    const initializeDB = async () => {
+      await initDB();
+      setIsDbReady(true);
+    };
+
+    initializeDB();
+  }, []);
+
+  if (!isDbReady) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Cognisus Mobile</Text>
+        <Text style={styles.subtitle}>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Cognisus Mobile</Text>
 
-      <Text style={styles.subtitle}>
-        Aplicativo de triagem cognitiva
-      </Text>
+      <Text style={styles.subtitle}>Aplicativo de triagem cognitiva</Text>
 
-        <Pressable
+      <Pressable
         style={[styles.button, styles.primaryButton]}
         onPress={() => router.push("/cadastro")}
       >
