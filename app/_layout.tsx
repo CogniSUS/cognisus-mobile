@@ -1,26 +1,54 @@
-import { Slot } from "expo-router";
-import { StyleSheet, View } from "react-native";
-import { AppHeader } from "@/components/layout/app-header";
-import { MenuApp } from "@/components/layout/menu-app";
+import { initDB } from "@/database/database";
+import { AuthProvider, useAuth } from "@/providers/AuthProvider";
+import { Href, Slot, useRouter, useSegments } from "expo-router";
+import { useEffect, useState } from "react";
+import { Text, View } from "react-native";
 
-export default function AppLayout() {
-  return (
-    <View style={styles.container}>
-      <AppHeader />
-      <View style={styles.content}>
-        <Slot />
-      </View>
-      <MenuApp />
-    </View>
-  );
+function RootLayoutNav() {
+  const { session, isLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === ("(auth)" as any);
+
+    if (!session && !inAuthGroup) {
+      router.replace("/(auth)/login" as Href);
+    } else if (session && inAuthGroup) {
+      router.replace("/(app)" as Href);
+    }
+  }, [session, isLoading, segments, router]);
+
+  if (isLoading) return null;
+
+  return <Slot />;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F6F4FA",
-  },
-  content: {
-    flex: 1,
-  },
-});
+export default function AppLayout() {
+  const [isDbReady, setIsDbReady] = useState(false);
+
+  useEffect(() => {
+    const initializeDB = async () => {
+      await initDB();
+      setIsDbReady(true);
+    };
+    initializeDB();
+  }, []);
+
+  if (!isDbReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Preparando o aplicativo...</Text>
+      </View>
+    );
+  }
+
+  // Envolvemos o app no AuthProvider
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
+}
