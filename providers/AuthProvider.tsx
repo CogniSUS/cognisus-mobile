@@ -7,12 +7,16 @@ type AuthContextType = {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   isLoading: true,
+  logout: function (): Promise<void> {
+    throw new Error("Function not implemented.");
+  },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -44,8 +48,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user, isLoading }}>
+    <AuthContext.Provider value={{ session, user, isLoading, logout }}>
       {children}
     </AuthContext.Provider>
   );
