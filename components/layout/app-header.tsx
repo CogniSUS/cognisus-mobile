@@ -1,10 +1,10 @@
+import { useLogout } from "@/hooks/useLogout";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState } from "react";
 import { ProfileMenu } from "./profile-menu";
-import { useLogout } from "@/hooks/useLogout";
 
 export function AppHeader() {
   const [menuVisible, setMenuVisible] = useState(false);
@@ -46,14 +46,13 @@ export function AppHeader() {
 
           <View style={styles.rightSection}>
             <Pressable style={styles.iconButton}>
-              <Ionicons name="notifications" size={20} color="#6E34B5" />
-            </Pressable>
-
-            <Pressable style={styles.iconButton}>
               <Ionicons name="settings-outline" size={21} color="#6E34B5" />
             </Pressable>
 
-            <Pressable style={styles.profileButton} onPress={handleProfilePress}>
+            <Pressable
+              style={styles.profileButton}
+              onPress={handleProfilePress}
+            >
               <Ionicons name="person-outline" size={16} color="#FFFFFF" />
             </Pressable>
           </View>
