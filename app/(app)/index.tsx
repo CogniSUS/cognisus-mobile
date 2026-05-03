@@ -1,4 +1,5 @@
-import { initDB } from "@/database/database";
+import { getDB, initDB } from "@/database/database";
+import { supabase } from "@/utils/supabase";
 import { AntDesign, FontAwesome, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { Picker } from '@react-native-picker/picker';
 import { router } from "expo-router";
@@ -17,6 +18,17 @@ export default function HomePage() {
   const [unidadeSaude, setUnidadeSaude] = useState('')
   const [loading, setLoading] = useState(false);
 
+  function limparCampos() {
+  setNome('')
+  setCpf('')
+  setDataNascimento('')
+  setSexo('')
+  setEscolaridade('')
+  setDCNT('')
+  setUnidadeSaude('')
+}
+
+
   async function cadastrarPaciente(){
     try{
       setLoading(true)
@@ -31,14 +43,98 @@ export default function HomePage() {
               setLoading(false);
               return Alert.alert("Erro", "CPF deve conter exatamente 11 dígitos");}
               
-      setTimeout(()=>{
-          Alert.alert("Sucesso", "Cadastro de paciente realizado!")
-          setMostrarCadastro(false)
+        const partesData = dataNascimento.split("/")
+        if (partesData.length !== 3) {
           setLoading(false)
-          
+          return Alert.alert("Erro", "Data inválida")
+        }
 
-        },3000)
+        const dia = partesData[0]
+        const mes = partesData[1]
+        const ano = partesData[2]
 
+        if (
+          dia.length !== 2 ||
+          mes.length !== 2 ||
+          ano.length !== 4
+        ) {
+          setLoading(false)
+          return Alert.alert("Erro", "Data inválida")
+        }
+
+        const dataFormatada = `${ano}-${mes}-${dia}`
+        if (
+          Number(dia) > 31 ||
+          Number(mes) > 12
+        ) {
+          setLoading(false)
+          return Alert.alert("Erro", "Data inválida")
+        }
+        const { data, error } = await supabase
+          .from("paciente")
+          .insert([
+            {
+              created_at: new Date().toISOString(),
+              sync_status: "synced",
+              nome_completo: nome,
+              cpf: cpf,
+              data_nascimento: dataFormatada,
+              sexo: sexo,
+              escolaridade: 1
+            }
+          ])
+          .select()
+          if (error) {
+            console.log(error)
+
+            setLoading(false)
+
+            return Alert.alert(
+              "Erro",
+              "Erro ao cadastrar paciente"
+            )
+          }
+
+          try {
+            const db = await getDB()
+
+            await db.runAsync(
+              `INSERT INTO paciente 
+              (
+                created_at,
+                sync_status,
+                nome_completo,
+                cpf,
+                data_nascimento,
+                sexo,
+                escolaridade
+              )
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [
+                new Date().toISOString(),
+                "synced",
+                nome,
+                cpf,
+                dataFormatada,
+                sexo,
+                1
+              ]
+            )
+
+          } catch (dbError) {
+            console.log("Erro SQLite:")
+            console.log(dbError)
+          }
+          Alert.alert(
+            "Sucesso",
+            "Paciente cadastrado!"
+          )
+
+          limparCampos()
+
+          setMostrarCadastro(false)
+
+          setLoading(false)
     }
     catch(error){
       console.log(error);
@@ -209,7 +305,10 @@ export default function HomePage() {
                 <View style={styles.boxBotton}>
                   <TouchableOpacity
                     style={[styles.button, styles.tertiaryButton]}
-                    onPress={() => setMostrarCadastro(false)}
+                    onPress={() => { 
+                      limparCampos() 
+                      setMostrarCadastro(false)
+                    }}
                   >
                     <Text style={styles.tertiaryButtonText}>Voltar</Text>
                 </TouchableOpacity>
