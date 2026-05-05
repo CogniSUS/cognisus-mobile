@@ -18,6 +18,7 @@ export default function HomePage() {
   const [unidadeSaude, setUnidadeSaude] = useState('')
   const [loading, setLoading] = useState(false);
 
+  
   function limparCampos() {
   setNome('')
   setCpf('')
@@ -30,6 +31,7 @@ export default function HomePage() {
 
 
   async function cadastrarPaciente(){
+
     try{
       setLoading(true)
       if (!nome ||!cpf|| !dataNascimento || sexo=="" || dcnt=="" || unidadeSaude=="" || escolaridade=="") {
@@ -70,6 +72,8 @@ export default function HomePage() {
           setLoading(false)
           return Alert.alert("Erro", "Data inválida")
         }
+
+
         const { data, error } = await supabase
           .from("paciente")
           .insert([
@@ -80,7 +84,7 @@ export default function HomePage() {
               cpf: cpf,
               data_nascimento: dataFormatada,
               sexo: sexo,
-              escolaridade: 1
+              escolaridade: escolaridade
             }
           ])
           .select()
@@ -94,7 +98,6 @@ export default function HomePage() {
               "Erro ao cadastrar paciente"
             )
           }
-
           try {
             const db = await getDB()
 
@@ -117,7 +120,7 @@ export default function HomePage() {
                 cpf,
                 dataFormatada,
                 sexo,
-                1
+                escolaridade
               ]
             )
 
@@ -145,6 +148,7 @@ export default function HomePage() {
   useEffect(() => {
     const initializeDB = async () => {
       await initDB();
+
       setIsDbReady(true);
     };
 
@@ -250,19 +254,19 @@ export default function HomePage() {
 
                       <Picker.Item label="Escolaridade" value="" />
 
-                      <Picker.Item label="Ensino Fundamental Incompleto" value="ensinoFundamentalIncompleto" />
+                      <Picker.Item label="Ensino Fundamental Incompleto" value={1} />
 
-                      <Picker.Item label="Ensino Fundamental Completo" value="ensinoFundamentalCompleto" />
+                      <Picker.Item label="Ensino Fundamental Completo" value={2} />
 
-                      <Picker.Item label="Ensino Médio Incompleto" value="ensinoMedioIncompleto" />
+                      <Picker.Item label="Ensino Médio Incompleto" value={3} />
 
-                      <Picker.Item label="Ensino Médio Completo" value="ensinoMedioCompleto" />
+                      <Picker.Item label="Ensino Médio Completo" value={4} />
 
-                      <Picker.Item label="Ensino Superior Incompleto" value="ensinoSuperiorIncompleto" />
+                      <Picker.Item label="Ensino Superior Incompleto" value={5} />
 
-                      <Picker.Item label="Ensino Superior Completo" value="ensinoSuperiorCompleto" />
+                      <Picker.Item label="Ensino Superior Completo" value={6} />
 
-                      <Picker.Item label="Pós Graduação" value="posGraduacao" />
+                      <Picker.Item label="Pós Graduação" value={7} />
 
                     </Picker>
                     <Ionicons style={styles.icons} name="school" size={24} />
@@ -296,7 +300,9 @@ export default function HomePage() {
 
                     <Picker.Item label="Unidade de saúde" value="" />
 
-                    <Picker.Item label="A definir" value="aDefinir" />
+                    <Picker.Item label="Hospital São José" value="hsaojose" />
+
+                    <Picker.Item label="Hospital São Lucas" value="hsaolucas" />
 
 
                   </Picker>
