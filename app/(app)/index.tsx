@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Dimensions, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 export default function HomePage() {
-  const [isDbReady, setIsDbReady] = useState(false)
   const [mostrarCadastro, setMostrarCadastro] = useState(false)
   const [nome, setNome] = useState('')
   const [cpf,setCpf] = useState('')
@@ -20,14 +19,14 @@ export default function HomePage() {
 
   
   function limparCampos() {
-  setNome('')
-  setCpf('')
-  setDataNascimento('')
-  setSexo('')
-  setEscolaridade('')
-  setDCNT('')
-  setUnidadeSaude('')
-}
+    setNome('')
+    setCpf('')
+    setDataNascimento('')
+    setSexo('')
+    setEscolaridade('')
+    setDCNT('')
+    setUnidadeSaude('')
+  }
 
 
   async function cadastrarPaciente(){
@@ -144,24 +143,6 @@ export default function HomePage() {
       Alert.alert("Erro", "Erro ao conectar ao servidor.");
       setLoading(false);
     }
-  }
-  useEffect(() => {
-    const initializeDB = async () => {
-      await initDB();
-
-      setIsDbReady(true);
-    };
-
-    initializeDB();
-  }, []);
-
-  if (!isDbReady) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Cognisus Mobile</Text>
-        <Text style={styles.subtitle}>Loading...</Text>
-      </View>
-    );
   }
 
   return (

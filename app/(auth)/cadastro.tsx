@@ -64,19 +64,46 @@ export default function Cadastro() {
       if (data.user) {
         const userId = data.user.id;
 
+        // Validação de userId
+        if (!userId) {
+          setLoading(false);
+          return Alert.alert(
+            "Erro",
+            "Não foi possível obter o ID do usuário do Supabase",
+          );
+        }
+
         try {
           const db = await getDB();
+          const createdAt = new Date().toISOString();
+
           await db.runAsync(
             `INSERT INTO profissional (user_id, nome_completo, cpf, email, sync_status, created_at) 
-             VALUES (?, ?, ?, ?, 'synced', datetime('now'))`,
-            [userId, name, cpf, email],
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [userId, name, cpf, email, "synced", createdAt],
           );
 
           Alert.alert("Sucesso", "Cadastro realizado com sucesso!");
           router.replace("/(app)");
         } catch (dbError) {
-          console.error("Erro ao salvar no banco local", dbError);
-          router.replace("/(app)");
+          console.error("Erro ao salvar no banco local:", dbError);
+
+          // Melhor tratamento de erro
+          if (dbError instanceof Error) {
+            const errorMessage =
+              dbError.message ||
+              "Erro desconhecido ao salvar no banco de dados";
+            console.error("Detalhes do erro:", errorMessage);
+
+            // Verifica se é erro de constraint (CPF ou Email duplicados)
+            if (errorMessage.includes("UNIQUE constraint failed")) {
+              setLoading(false);
+              return Alert.alert(
+                "Erro",
+                "CPF ou Email já cadastrado no sistema",
+              );
+            }
+          }
         }
       }
     } catch (error) {
