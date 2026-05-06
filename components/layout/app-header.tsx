@@ -1,48 +1,70 @@
+import { useLogout } from "@/hooks/useLogout";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ProfileMenu } from "./profile-menu";
 
 export function AppHeader() {
+  const [menuVisible, setMenuVisible] = useState(false);
+  const { logout, isLoggingOut } = useLogout();
+
+  const handleProfilePress = () => {
+    setMenuVisible(!menuVisible);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setMenuVisible(false);
+  };
+
   return (
-    <SafeAreaView edges={["top"]} style={styles.safeArea}>
-      <LinearGradient
-        colors={["#FCFAFE", "#F0E5FB", "#E4D4F6"]}
-        locations={[0, 0.5, 1]}
-        start={{ x: 0, y: 1 }}
-        end={{ x: 0, y: 0 }}
-        style={styles.container}
-      >
-        <View style={styles.leftSection}>
-          <View style={styles.logoWrapper}>
-            <Image
-              source={require("@/assets/images/logo-img.png")}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
+    <>
+      <SafeAreaView edges={["top"]} style={styles.safeArea}>
+        <LinearGradient
+          colors={["#FCFAFE", "#F0E5FB", "#E4D4F6"]}
+          locations={[0, 0.5, 1]}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 0, y: 0 }}
+          style={styles.container}
+        >
+          <View style={styles.leftSection}>
+            <View style={styles.logoWrapper}>
+              <Image
+                source={require("@/assets/images/logo-img.png")}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+
+            <Text style={styles.title}>
+              <Text style={styles.titleLight}>COGNI</Text>
+              <Text style={styles.titleBold}>SUS</Text>
+            </Text>
           </View>
 
-          <Text style={styles.title}>
-            <Text style={styles.titleLight}>COGNI</Text>
-            <Text style={styles.titleBold}>SUS</Text>
-          </Text>
-        </View>
+          <View style={styles.rightSection}>
+            <Pressable style={styles.iconButton}>
+              <Ionicons name="settings-outline" size={21} color="#6E34B5" />
+            </Pressable>
 
-        <View style={styles.rightSection}>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="notifications" size={20} color="#6E34B5" />
-          </Pressable>
-
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="settings-outline" size={21} color="#6E34B5" />
-          </Pressable>
-
-          <Pressable style={styles.profileButton}>
-            <Ionicons name="person-outline" size={16} color="#FFFFFF" />
-          </Pressable>
-        </View>
-      </LinearGradient>
-    </SafeAreaView>
+            <Pressable
+              style={styles.profileButton}
+              onPress={handleProfilePress}
+            >
+              <Ionicons name="person-outline" size={16} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </LinearGradient>
+      </SafeAreaView>
+      <ProfileMenu
+        isVisible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        onLogout={handleLogout}
+        isLoggingOut={isLoggingOut}
+      />
+    </>
   );
 }
 
