@@ -1,146 +1,151 @@
-import { getDB, initDB } from "@/database/database";
+import { getDB } from "@/database/database";
+import { useToast } from "@/hooks/useToast";
 import { supabase } from "@/utils/supabase";
-import { AntDesign, FontAwesome, FontAwesome5, Ionicons } from "@expo/vector-icons";
-import { Picker } from '@react-native-picker/picker';
+import {
+  AntDesign,
+  FontAwesome,
+  FontAwesome5,
+  Ionicons,
+} from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Dimensions, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function HomePage() {
-  const [mostrarCadastro, setMostrarCadastro] = useState(false)
-  const [nome, setNome] = useState('')
-  const [cpf,setCpf] = useState('')
-  const [dataNascimento, setDataNascimento] = useState('')
-  const [sexo, setSexo] = useState('')
-  const [escolaridade, setEscolaridade] = useState('')
-  const [dcnt, setDCNT] = useState('')
-  const [unidadeSaude, setUnidadeSaude] = useState('')
+  const [mostrarCadastro, setMostrarCadastro] = useState(false);
+  const [nome, setNome] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
+  const [sexo, setSexo] = useState("");
+  const [escolaridade, setEscolaridade] = useState("");
+  const [dcnt, setDCNT] = useState("");
+  const [unidadeSaude, setUnidadeSaude] = useState("");
   const [loading, setLoading] = useState(false);
 
-  
+  const {
+    success: showSuccess,
+    error: showError,
+    info: showInfo,
+  } = useToast();
+
   function limparCampos() {
-    setNome('')
-    setCpf('')
-    setDataNascimento('')
-    setSexo('')
-    setEscolaridade('')
-    setDCNT('')
-    setUnidadeSaude('')
+    setNome("");
+    setCpf("");
+    setDataNascimento("");
+    setSexo("");
+    setEscolaridade("");
+    setDCNT("");
+    setUnidadeSaude("");
   }
 
+  async function cadastrarPaciente() {
+    try {
+      setLoading(true);
 
-  async function cadastrarPaciente(){
+      if (
+        !nome ||
+        !cpf ||
+        !dataNascimento ||
+        sexo === "" ||
+        dcnt === "" ||
+        unidadeSaude === "" ||
+        escolaridade === ""
+      ) {
+        setLoading(false);
+        return showInfo("Preencha os campos");
+      } else if (cpf.length !== 11) {
+        setLoading(false);
+        return showError("CPF deve conter exatamente 11 dígitos");
+      }
 
-    try{
-      setLoading(true)
-      if (!nome ||!cpf|| !dataNascimento || sexo=="" || dcnt=="" || unidadeSaude=="" || escolaridade=="") {
-        setLoading(false)
-        return Alert.alert(
-          "Erro",
-          "Preencha os campos"
-        )
-      
-      } else if (cpf.length != 11) {
-              setLoading(false);
-              return Alert.alert("Erro", "CPF deve conter exatamente 11 dígitos");}
-              
-        const partesData = dataNascimento.split("/")
-        if (partesData.length !== 3) {
-          setLoading(false)
-          return Alert.alert("Erro", "Data inválida")
-        }
+      const partesData = dataNascimento.split("/");
 
-        const dia = partesData[0]
-        const mes = partesData[1]
-        const ano = partesData[2]
+      if (partesData.length !== 3) {
+        setLoading(false);
+        return showError("Data inválida");
+      }
 
-        if (
-          dia.length !== 2 ||
-          mes.length !== 2 ||
-          ano.length !== 4
-        ) {
-          setLoading(false)
-          return Alert.alert("Erro", "Data inválida")
-        }
+      const dia = partesData[0];
+      const mes = partesData[1];
+      const ano = partesData[2];
 
-        const dataFormatada = `${ano}-${mes}-${dia}`
-        if (
-          Number(dia) > 31 ||
-          Number(mes) > 12
-        ) {
-          setLoading(false)
-          return Alert.alert("Erro", "Data inválida")
-        }
+      if (dia.length !== 2 || mes.length !== 2 || ano.length !== 4) {
+        setLoading(false);
+        return showError("Data inválida");
+      }
 
+      const dataFormatada = `${ano}-${mes}-${dia}`;
 
-        const { data, error } = await supabase
-          .from("paciente")
-          .insert([
-            {
-              created_at: new Date().toISOString(),
-              sync_status: "synced",
-              nome_completo: nome,
-              cpf: cpf,
-              data_nascimento: dataFormatada,
-              sexo: sexo,
-              escolaridade: escolaridade
-            }
-          ])
-          .select()
-          if (error) {
-            console.log(error)
+      if (Number(dia) > 31 || Number(mes) > 12) {
+        setLoading(false);
+        return showError("Data inválida");
+      }
 
-            setLoading(false)
+      const { error } = await supabase.from("paciente").insert([
+        {
+          created_at: new Date().toISOString(),
+          sync_status: "synced",
+          nome_completo: nome,
+          cpf,
+          data_nascimento: dataFormatada,
+          sexo,
+          escolaridade,
+        },
+      ]);
 
-            return Alert.alert(
-              "Erro",
-              "Erro ao cadastrar paciente"
-            )
-          }
-          try {
-            const db = await getDB()
+      if (error) {
+        console.log(error);
+        setLoading(false);
+        return showError("Erro ao cadastrar paciente");
+      }
 
-            await db.runAsync(
-              `INSERT INTO paciente 
-              (
-                created_at,
-                sync_status,
-                nome_completo,
-                cpf,
-                data_nascimento,
-                sexo,
-                escolaridade
-              )
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-              [
-                new Date().toISOString(),
-                "synced",
-                nome,
-                cpf,
-                dataFormatada,
-                sexo,
-                escolaridade
-              ]
-            )
+      try {
+        const db = await getDB();
 
-          } catch (dbError) {
-            console.log("Erro SQLite:")
-            console.log(dbError)
-          }
-          Alert.alert(
-            "Sucesso",
-            "Paciente cadastrado!"
+        await db.runAsync(
+          `INSERT INTO paciente 
+          (
+            created_at,
+            sync_status,
+            nome_completo,
+            cpf,
+            data_nascimento,
+            sexo,
+            escolaridade
           )
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            new Date().toISOString(),
+            "synced",
+            nome,
+            cpf,
+            dataFormatada,
+            sexo,
+            escolaridade,
+          ]
+        );
+      } catch (dbError) {
+        console.log("Erro SQLite:");
+        console.log(dbError);
+      }
 
-          limparCampos()
-
-          setMostrarCadastro(false)
-
-          setLoading(false)
-    }
-    catch(error){
-      console.log(error);
-      Alert.alert("Erro", "Erro ao conectar ao servidor.");
+      showSuccess("Paciente cadastrado!");
+      limparCampos();
+      setMostrarCadastro(false);
+      setLoading(false);
+    } catch (err) {
+      console.log(err);
+      showError("Erro ao conectar ao servidor.");
       setLoading(false);
     }
   }
@@ -334,7 +339,6 @@ export default function HomePage() {
         </View>
     }
     </View>
-    
   );
 }
 

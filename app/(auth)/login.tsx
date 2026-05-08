@@ -1,10 +1,10 @@
 import { supabase } from "@/utils/supabase";
+import { useToast } from "@/hooks/useToast";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   Image,
   Pressable,
@@ -14,13 +14,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Logo from "../../assets/images/file.jpg";
+import Logo from "@/assets/images/file.jpg";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { error: showError, info: showInfo } = useToast();
 
   async function getLogin() {
     try {
@@ -31,10 +32,9 @@ export default function Login() {
 
       if (!emailTratado || !passwordTratado) {
         setLoading(false);
-        return Alert.alert("Atenção", "Informe os campos obrigatórios!");
+        return showInfo("Informe os campos obrigatórios!");
       }
 
-      // Tenta fazer o login no Supabase
       const { error } = await supabase.auth.signInWithPassword({
         email: emailTratado,
         password: passwordTratado,
@@ -42,15 +42,16 @@ export default function Login() {
 
       if (error) {
         setLoading(false);
-        // Tradução simples de erros comuns
+
         if (error.message.includes("Invalid login credentials")) {
-          return Alert.alert("Erro", "Email ou senha incorretos.");
+          return showError("Email ou senha incorretos.");
         }
-        return Alert.alert("Erro", error.message);
+
+        return showError(error.message);
       }
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Erro", "Erro ao conectar ao servidor.");
+    } catch (err) {
+      console.log(err);
+      showError("Erro ao conectar ao servidor.");
       setLoading(false);
     }
   }
@@ -89,7 +90,7 @@ export default function Login() {
           </Pressable>
         </View>
         <View style={style.boxBotton}>
-          <TouchableOpacity style={style.button} onPress={() => getLogin()}>
+          <TouchableOpacity style={style.button} onPress={getLogin}>
             {loading ? (
               <ActivityIndicator color={"white"} size={"small"} />
             ) : (

@@ -1,5 +1,6 @@
 import { initDB } from "@/database/database";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
+import { ToastProvider } from "@/providers/ToastProvider";
 import { Href, Slot, useRouter, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
@@ -12,7 +13,7 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === ("(auth)" as any);
+    const inAuthGroup = segments[0] === "(auth)";
 
     if (!session && !inAuthGroup) {
       router.replace("/(auth)/login" as Href);
@@ -34,6 +35,7 @@ export default function AppLayout() {
       await initDB();
       setIsDbReady(true);
     };
+
     initializeDB();
   }, []);
 
@@ -45,10 +47,11 @@ export default function AppLayout() {
     );
   }
 
-  // Envolvemos o app no AuthProvider
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <ToastProvider>
+        <RootLayoutNav />
+      </ToastProvider>
     </AuthProvider>
   );
 }

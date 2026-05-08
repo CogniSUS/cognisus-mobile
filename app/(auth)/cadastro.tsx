@@ -1,11 +1,11 @@
 import { getDB } from "@/database/database";
+import { useToast } from "@/hooks/useToast";
 import { supabase } from "@/utils/supabase";
 import { AntDesign, FontAwesome, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   Image,
   Pressable,
@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Logo from "../../assets/images/file.jpg";
+import Logo from "@/assets/images/file.jpg";
 
 export default function Cadastro() {
   const [name, setName] = useState("");
@@ -26,51 +26,55 @@ export default function Cadastro() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const {
+    success: showSuccess,
+    error: showError,
+    info: showInfo,
+  } = useToast();
+
   async function getCadastro() {
     try {
       setLoading(true);
+
       if (!email || !password || !confirmPassword || !cpf || !name) {
         setLoading(false);
-        return Alert.alert("Atenção", "Informe os campos obrigatórios!");
+        return showInfo("Informe os campos obrigatórios!");
       } else if (!email.includes("@")) {
         setLoading(false);
-        return Alert.alert("Erro", "Email inválido");
-      } else if (cpf.length != 11) {
+        return showError("Email inválido");
+      } else if (cpf.length !== 11) {
         setLoading(false);
-        return Alert.alert("Erro", "CPF deve conter exatamente 11 dígitos");
+        return showError("CPF deve conter exatamente 11 dígitos");
       } else if (password.length < 6) {
         setLoading(false);
-        return Alert.alert("Erro", "Senha deve ter pelo menos 6 caracteres");
-      } else if (password != confirmPassword) {
+        return showError("Senha deve ter pelo menos 6 caracteres");
+      } else if (password !== confirmPassword) {
         setLoading(false);
-        return Alert.alert("Erro", "Senha e confirmar senha estão diferentes");
+        return showError("Senha e confirmar senha estão diferentes");
       }
 
       const { data, error } = await supabase.auth.signUp({
-        email: email,
-        password: password,
+        email,
+        password,
         options: {
           data: {
             nome_completo: name,
-            cpf: cpf,
+            cpf,
           },
         },
       });
 
       if (error) {
         setLoading(false);
-        return Alert.alert("Erro no Cadastro", error.message);
+        return showError(error.message);
       }
+
       if (data.user) {
         const userId = data.user.id;
 
-        // Validação de userId
         if (!userId) {
           setLoading(false);
-          return Alert.alert(
-            "Erro",
-            "Não foi possível obter o ID do usuário do Supabase",
-          );
+          return showError("Não foi possível obter o ID do usuário");
         }
 
         try {
@@ -80,34 +84,33 @@ export default function Cadastro() {
           await db.runAsync(
             `INSERT INTO profissional (user_id, nome_completo, cpf, email, sync_status, created_at) 
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [userId, name, cpf, email, "synced", createdAt],
+            [userId, name, cpf, email, "synced", createdAt]
           );
 
-          Alert.alert("Sucesso", "Cadastro realizado com sucesso!");
+          showSuccess("Cadastro realizado com sucesso!");
+          showInfo("Verifique seu e-mail para confirmar a conta.");
           router.replace("/(app)");
         } catch (dbError) {
           console.error("Erro ao salvar no banco local:", dbError);
 
-          // Melhor tratamento de erro
           if (dbError instanceof Error) {
             const errorMessage =
               dbError.message ||
               "Erro desconhecido ao salvar no banco de dados";
-            console.error("Detalhes do erro:", errorMessage);
 
-            // Verifica se é erro de constraint (CPF ou Email duplicados)
             if (errorMessage.includes("UNIQUE constraint failed")) {
               setLoading(false);
-              return Alert.alert(
-                "Erro",
-                "CPF ou Email já cadastrado no sistema",
-              );
+              return showError("CPF ou Email já cadastrado no sistema");
             }
           }
+
+          setLoading(false);
+          return showError("Erro ao salvar os dados localmente.");
         }
       }
-    } catch (error) {
-      Alert.alert("Erro Inesperado", "Ocorreu um erro ao realizar o cadastro.");
+    } catch (err) {
+      console.error(err);
+      showError("Ocorreu um erro ao realizar o cadastro.");
     } finally {
       setLoading(false);
     }
