@@ -56,7 +56,9 @@ export const initDB = async () => {
         sync_error TEXT,
         nome TEXT NOT NULL,
         status INTEGER NOT NULL,
-        versao TEXT
+        versao TEXT,
+        abreviacao TEXT,
+        tempo_estimado_min INTEGER
         );
 
         CREATE TABLE IF NOT EXISTS paciente (
