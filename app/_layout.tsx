@@ -1,4 +1,4 @@
-import { initDB } from "@/database/database";
+import { getDB, initDB } from "@/database/database";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
 import { initialSync } from "@/services/sync/initialSync";
@@ -17,6 +17,19 @@ function RootLayoutNav() {
     async function runSync() {
       if (session?.user?.id) {
         try {
+          const db = await getDB();
+
+          // Buscamos pelo user_id que vem do Auth do Supabase
+          const profissionalLocal = await db.getFirstAsync<{ id: number }>(
+            "SELECT id FROM profissional WHERE user_id = ? LIMIT 1;",
+            [session.user.id],
+          );
+
+          if (profissionalLocal) {
+            setIsSyncing(false);
+            return; // Sai da função sem executar o initialSync
+          }
+
           setIsSyncing(true);
           console.log("Iniciando sincronização de dados...");
 

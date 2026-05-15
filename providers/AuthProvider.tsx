@@ -1,4 +1,5 @@
 // providers/AuthProvider.tsx
+import { getDB } from "@/database/database";
 import { supabase } from "@/utils/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useState } from "react";
@@ -50,6 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      const db = await getDB();
+
+      await db.execAsync(`
+        DELETE FROM profissional;
+      `);
       await supabase.auth.signOut();
     } catch (error) {
       console.error("Erro ao fazer logout:", error);

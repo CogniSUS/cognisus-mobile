@@ -56,7 +56,9 @@ export const initDB = async () => {
           sync_error TEXT,
           nome TEXT NOT NULL,
           status INTEGER NOT NULL,
-          versao TEXT
+          versao TEXT,
+          abreviacao TEXTO,
+          tempo_estimado_min INTEGER
         );
 
         CREATE TABLE IF NOT EXISTS paciente (
@@ -128,18 +130,6 @@ export const initDB = async () => {
         );
     `);
 
-    await db.runAsync(`
-      INSERT OR IGNORE INTO escolaridade
-      (id, created_at, sync_status, tipo)
-      VALUES
-      (1, CURRENT_TIMESTAMP, 'synced', 'Ensino Fundamental Incompleto'),
-      (2, CURRENT_TIMESTAMP, 'synced', 'Ensino Fundamental Completo'),
-      (3, CURRENT_TIMESTAMP, 'synced', 'Ensino Médio Incompleto'),
-      (4, CURRENT_TIMESTAMP, 'synced', 'Ensino Médio Completo'),
-      (5, CURRENT_TIMESTAMP, 'synced', 'Ensino Superior Incompleto'),
-      (6, CURRENT_TIMESTAMP, 'synced', 'Ensino Superior Completo'),
-      (7, CURRENT_TIMESTAMP, 'synced', 'Pós Graduação');
-    `);
     console.log("Banco de dados inicializado com chaves estrangeiras ativas!");
   } catch (error) {
     console.error("Erro ao inicializar o banco de dados:", error);
