@@ -57,7 +57,7 @@ export const initDB = async () => {
           nome TEXT NOT NULL,
           status INTEGER NOT NULL,
           versao TEXT,
-          abreviacao TEXTO,
+          abreviacao TEXT,
           tempo_estimado_min INTEGER
         );
 
