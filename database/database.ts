@@ -2,7 +2,7 @@ import * as SQLite from "expo-sqlite";
 
 // Cria uma função para pegar/abrir o banco de forma assíncrona
 export const getDB = async () => {
-  return await SQLite.openDatabaseAsync("cognisus.db");
+  return await SQLite.openDatabaseAsync("cognisus1.db");
 };
 
 export const initDB = async () => {
