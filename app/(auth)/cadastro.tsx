@@ -1,4 +1,4 @@
-import { getDB } from "@/database/database";
+import Logo from "@/assets/images/file.jpg";
 import { useToast } from "@/hooks/useToast";
 import { supabase } from "@/utils/supabase";
 import { AntDesign, FontAwesome, Ionicons } from "@expo/vector-icons";
@@ -15,7 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Logo from "@/assets/images/file.jpg";
 
 export default function Cadastro() {
   const [name, setName] = useState("");
@@ -26,11 +25,7 @@ export default function Cadastro() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const {
-    success: showSuccess,
-    error: showError,
-    info: showInfo,
-  } = useToast();
+  const { success: showSuccess, error: showError, info: showInfo } = useToast();
 
   async function getCadastro() {
     try {
@@ -77,36 +72,9 @@ export default function Cadastro() {
           return showError("Não foi possível obter o ID do usuário");
         }
 
-        try {
-          const db = await getDB();
-          const createdAt = new Date().toISOString();
-
-          await db.runAsync(
-            `INSERT INTO profissional (user_id, nome_completo, cpf, email, sync_status, created_at) 
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [userId, name, cpf, email, "synced", createdAt]
-          );
-
-          showSuccess("Cadastro realizado com sucesso!");
-          showInfo("Verifique seu e-mail para confirmar a conta.");
-          router.replace("/(app)");
-        } catch (dbError) {
-          console.error("Erro ao salvar no banco local:", dbError);
-
-          if (dbError instanceof Error) {
-            const errorMessage =
-              dbError.message ||
-              "Erro desconhecido ao salvar no banco de dados";
-
-            if (errorMessage.includes("UNIQUE constraint failed")) {
-              setLoading(false);
-              return showError("CPF ou Email já cadastrado no sistema");
-            }
-          }
-
-          setLoading(false);
-          return showError("Erro ao salvar os dados localmente.");
-        }
+        showSuccess("Cadastro realizado com sucesso!");
+        showInfo("Verifique seu e-mail para confirmar a conta.");
+        router.replace("/(app)");
       }
     } catch (err) {
       console.error(err);
