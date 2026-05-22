@@ -274,26 +274,6 @@ export default function HomePage() {
                   </Picker>
                   <FontAwesome style={styles.icons} name="heartbeat" size={24} />
                 </View>
-
-
-                  <View style={styles.boxInput}>
-
-                  <Picker
-                    selectedValue={unidadeSaude}
-                    onValueChange={(itemValue) => setUnidadeSaude(itemValue)}
-                    style={styles.picker}
-                  >
-
-                    <Picker.Item label="Unidade de saúde" value="" />
-
-                    <Picker.Item label="Hospital São José" value="hsaojose" />
-
-                    <Picker.Item label="Hospital São Lucas" value="hsaolucas" />
-
-
-                  </Picker>
-                  <FontAwesome5 style={styles.icons} name="hospital" size={24} />
-                </View>
                 <View style={styles.boxBotton}>
                   <TouchableOpacity
                     style={[styles.button, styles.tertiaryButton]}
@@ -352,11 +332,11 @@ const styles = StyleSheet.create({
     boxTop: {
       height: Dimensions.get("window").height / 5.3,
       width: "100%",
-      marginTop: -43,
+      marginTop: -30,
       alignItems: "center",
     },
     boxMid: {
-      height: Dimensions.get("window").height / 1.4,
+      height: Dimensions.get("window").height / 1.5,
       width: "100%",
       marginTop: -100,
       backgroundColor: "#e3deff",
@@ -377,7 +357,7 @@ const styles = StyleSheet.create({
       alignSelf: "center",
       borderWidth: 1,
       borderRadius: 10,
-      marginTop: 13,
+      marginTop: 14,
       flexDirection: "row-reverse",
       paddingHorizontal: 10,
   },
