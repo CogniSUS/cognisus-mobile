@@ -9,7 +9,7 @@ import {
 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -29,8 +29,14 @@ export default function HomePage() {
   const [sexo, setSexo] = useState("");
   const [escolaridade, setEscolaridade] = useState("");
   const [dcnt, setDCNT] = useState("");
-  const [unidadeSaude, setUnidadeSaude] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [listaEscolaridade, setListaEscolaridade] = useState<
+  { id: number; tipo: string }[]
+  >([])
+  const [listaDCNT, setListaDCNT] = useState<
+  { id: number; tipo: string }[]
+  >([])
 
   const {
     success: showSuccess,
@@ -38,6 +44,7 @@ export default function HomePage() {
     info: showInfo,
   } = useToast();
 
+  
   function limparCampos() {
     setNome("");
     setCpf("");
@@ -45,8 +52,34 @@ export default function HomePage() {
     setSexo("");
     setEscolaridade("");
     setDCNT("");
-    setUnidadeSaude("");
   }
+
+  
+  async function carregarEscolaridades() {
+  const db = await getDB()
+
+  const dados = await db.getAllAsync<{
+  id: number
+  tipo: string
+}>(
+    "SELECT * FROM escolaridade"
+  )
+
+  setListaEscolaridade(dados)
+}
+
+async function carregarDCNT() {
+  const db = await getDB()
+
+  const dados = await db.getAllAsync<{
+  id: number
+  tipo: string
+}>(
+    "SELECT * FROM dcnt"
+  )
+
+  setListaDCNT(dados)
+}
 
   async function cadastrarPaciente() {
     try {
@@ -58,7 +91,6 @@ export default function HomePage() {
         !dataNascimento ||
         sexo === "" ||
         dcnt === "" ||
-        unidadeSaude === "" ||
         escolaridade === ""
       ) {
         setLoading(false);
@@ -134,6 +166,8 @@ export default function HomePage() {
             escolaridade,
           ]
         );
+
+        
       } catch (dbError) {
         console.log("Erro SQLite:");
         console.log(dbError);
@@ -149,6 +183,16 @@ export default function HomePage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+  async function carregarDados() {
+    await carregarEscolaridades()
+    await carregarDCNT()
+  }
+
+  carregarDados()
+}, [])
+
 
   return (
     <View style={styles.container}>
@@ -237,22 +281,18 @@ export default function HomePage() {
                       onValueChange={(itemValue) => setEscolaridade(itemValue)}
                       style={styles.picker}
                     >
-
-                      <Picker.Item label="Escolaridade" value="" />
-
-                      <Picker.Item label="Ensino Fundamental Incompleto" value={1} />
-
-                      <Picker.Item label="Ensino Fundamental Completo" value={2} />
-
-                      <Picker.Item label="Ensino Médio Incompleto" value={3} />
-
-                      <Picker.Item label="Ensino Médio Completo" value={4} />
-
-                      <Picker.Item label="Ensino Superior Incompleto" value={5} />
-
-                      <Picker.Item label="Ensino Superior Completo" value={6} />
-
-                      <Picker.Item label="Pós Graduação" value={7} />
+                    
+                    <Picker.Item label="Escolaridade" value="" />
+                    
+                      {
+                        listaEscolaridade.map((item) => (
+                          <Picker.Item
+                            key={item.id}
+                            label={item.tipo}
+                            value={item.id}
+                            />
+                        ))
+                      }
 
                     </Picker>
                     <Ionicons style={styles.icons} name="school" size={24} />
@@ -268,7 +308,15 @@ export default function HomePage() {
 
                     <Picker.Item label="DCNT deferida (s)" value="" />
 
-                    <Picker.Item label="A definir" value="aDefinir" />
+                    {
+                      listaDCNT.map((item) => (
+                        <Picker.Item
+                          key={item.id}
+                          label={item.tipo}
+                          value={item.id}
+                        />
+                      ))
+                    }
 
 
                   </Picker>
