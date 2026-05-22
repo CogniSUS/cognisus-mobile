@@ -1,30 +1,9 @@
-import { StyleSheet, Text, View } from "react-native";
-
+import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
 export default function TestsPage() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Testes</Text>
-      <Text style={styles.text}>
-        Área dos testes de triagem cognitiva.
-      </Text>
-    </View>
-  );
-}
+  useFocusEffect(() => {
+    router.replace("/tests/selection");
+  });
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    padding: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 8,
-  },
-  text: {
-    fontSize: 16,
-    color: "#64748B",
-  },
-});
+  return null; // Não renderizar nada
+}
