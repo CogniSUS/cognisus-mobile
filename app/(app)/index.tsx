@@ -125,7 +125,7 @@ async function carregarDCNT() {
       try {
         const db = await getDB();
 
-        await db.runAsync(
+        const resultado= await db.runAsync(
           `INSERT INTO paciente 
           (
             created_at,
@@ -148,6 +148,20 @@ async function carregarDCNT() {
           ]
         );
 
+        const pacienteId =resultado.lastInsertRowId;
+
+        await db.runAsync(
+          `INSERT INTO paciente_dcnt
+          (
+            paciente_id,
+            dcnt_id
+          )
+          VALUES (?, ?)`,
+          [
+            pacienteId,
+            dcnt
+          ]
+        )
         
       } catch (dbError) {
         console.log("Erro SQLite:");
