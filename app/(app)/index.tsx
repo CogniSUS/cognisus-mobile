@@ -1,6 +1,5 @@
 import { getDB } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
-import { supabase } from "@/utils/supabase";
 import {
   AntDesign,
   FontAwesome,
@@ -121,24 +120,6 @@ async function carregarDCNT() {
       if (Number(dia) > 31 || Number(mes) > 12) {
         setLoading(false);
         return showError("Data inválida");
-      }
-
-      const { error } = await supabase.from("paciente").insert([
-        {
-          created_at: new Date().toISOString(),
-          sync_status: "synced",
-          nome_completo: nome,
-          cpf,
-          data_nascimento: dataFormatada,
-          sexo,
-          escolaridade,
-        },
-      ]);
-
-      if (error) {
-        console.log(error);
-        setLoading(false);
-        return showError("Erro ao cadastrar paciente");
       }
 
       try {
