@@ -12,7 +12,12 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -29,6 +34,9 @@ export default function HomePage() {
   const [escolaridade, setEscolaridade] = useState("");
   const [dcnt, setDCNT] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [dcntsSelecionadas, setDcntsSelecionadas] = useState<number[]>([]);
+  const [modalDcntVisivel, setModalDcntVisivel] = useState(false);
 
   const [listaEscolaridade, setListaEscolaridade] = useState<
     { id: number; tipo: string }[]
@@ -55,6 +63,16 @@ export default function HomePage() {
     setSexo("");
     setEscolaridade("");
     setDCNT("");
+  }
+
+  function toggleDcnt(id: number) {
+    setDcntsSelecionadas((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((item) => item !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
   }
 
   async function carregarEscolaridades() {
@@ -90,7 +108,6 @@ export default function HomePage() {
         !cpfNumeros ||
         !dataNascimento ||
         sexo === "" ||
-        dcnt === "" ||
         escolaridade === ""
       ) {
         setLoading(false);
@@ -136,72 +153,72 @@ export default function HomePage() {
           return showError("Este CPF já está cadastrado no sistema.");
         }
 
-        const resultado = await db.runAsync(
-          `INSERT INTO paciente 
-          (
-            created_at,
-            sync_status,
-            nome_completo,
-            cpf,
-            data_nascimento,
-            sexo,
-            escolaridade
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            new Date().toISOString(),
-            "pending",
-            nome,
-            cpfNumeros,
-            dataFormatada,
-            sexo,
-            escolaridade,
-          ],
-        );
+        await db.withTransactionAsync(async () => {
+          const resultado = await db.runAsync(
+            `INSERT INTO paciente (created_at, sync_status, nome_completo, cpf, data_nascimento, sexo, escolaridade)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              new Date().toISOString(),
+              "pending",
+              nome,
+              cpfNumeros,
+              dataFormatada,
+              sexo,
+              escolaridade,
+            ],
+          );
 
-        const pacienteId = resultado.lastInsertRowId;
+          const pacienteId = resultado.lastInsertRowId;
 
-        await db.runAsync(
-          `INSERT INTO paciente_dcnt
-          (
-            created_at,
-            sync_status,
-            id_paciente,
-            id_dcnt
-          )
-          VALUES (?, ?, ?, ?)`,
-          [new Date().toISOString(), "pending", pacienteId, dcnt],
-        );
+          // Inserindo todas as DCNTs do array
+          for (const dcntId of dcntsSelecionadas) {
+            await db.runAsync(
+              `INSERT INTO paciente_dcnt (created_at, sync_status, id_paciente, id_dcnt)
+               VALUES (?, ?, ?, ?)`,
+              [new Date().toISOString(), "pending", pacienteId, dcntId],
+            );
+          }
 
-        const pacientePersistido = await db.getAllAsync<{
-          id: number;
-          nome_completo: string;
-          cpf: string;
-          data_nascimento: string;
-          sexo: string;
-          escolaridade: number;
-        }>(`SELECT * FROM paciente WHERE id = ?`, [pacienteId]);
+          const pacientePersistido = await db.getAllAsync<{
+            id: number;
 
-        console.log("Paciente recuperado do banco local", pacientePersistido);
+            nome_completo: string;
 
-        const pacienteDcntPersistido = await db.getAllAsync<{
-          id: number;
-          id_paciente: number;
-          id_dcnt: number;
-        }>(`SELECT * FROM paciente_dcnt WHERE id_paciente = ?`, [pacienteId]);
+            cpf: string;
 
-        console.log(
-          "Paciente_DCNT recuperado do banco local",
-          pacienteDcntPersistido,
-        );
+            data_nascimento: string;
+
+            sexo: string;
+
+            escolaridade: number;
+          }>(`SELECT * FROM paciente WHERE id = ?`, [pacienteId]);
+
+          console.log("Paciente recuperado do banco local", pacientePersistido);
+
+          const pacienteDcntPersistido = await db.getAllAsync<{
+            id: number;
+
+            id_paciente: number;
+
+            id_dcnt: number;
+          }>(`SELECT * FROM paciente_dcnt WHERE id_paciente = ?`, [pacienteId]);
+
+          console.log(
+            "Paciente_DCNT recuperado do banco local",
+
+            pacienteDcntPersistido,
+          );
+        });
+
+        showSuccess("Paciente cadastrado com sucesso!");
+        limparCampos();
+        setMostrarCadastro(false);
+        setLoading(false);
       } catch (dbError) {
         console.log("Erro SQLite:", dbError);
+        showError("Erro interno ao salvar dados.");
+        setLoading(false);
       }
-
-      showSuccess("Paciente cadastrado!");
-      limparCampos();
-      setMostrarCadastro(false);
-      setLoading(false);
     } catch (err) {
       console.log(err);
       showError("Erro ao conectar ao servidor.");
@@ -219,9 +236,15 @@ export default function HomePage() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
       {mostrarCadastro ? (
-        <View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.boxTop}>
             <Text style={styles.text}>Cadastro de Paciente</Text>
           </View>
@@ -238,7 +261,7 @@ export default function HomePage() {
             </View>
             <View style={styles.boxInput}>
               <TextInput
-                placeholder="Digite seu CPF (somente números)"
+                placeholder="Digite seu CPF"
                 keyboardType="numeric"
                 style={styles.input}
                 value={cpf}
@@ -312,24 +335,24 @@ export default function HomePage() {
               <Ionicons style={styles.icons} name="school" size={24} />
             </View>
 
-            <View style={styles.boxInput}>
-              <Picker
-                selectedValue={dcnt}
-                onValueChange={(itemValue) => setDCNT(itemValue)}
-                style={styles.picker}
+            <TouchableOpacity
+              style={styles.boxInput}
+              onPress={() => setModalDcntVisivel(true)}
+            >
+              <Text
+                style={{
+                  color: dcntsSelecionadas.length > 0 ? "#000" : "#888",
+                  flex: 1,
+                  paddingLeft: 10,
+                }}
               >
-                <Picker.Item label="DCNT deferida (s)" value="" />
-
-                {listaDCNT.map((item) => (
-                  <Picker.Item
-                    key={item.id}
-                    label={item.tipo}
-                    value={item.id}
-                  />
-                ))}
-              </Picker>
+                {dcntsSelecionadas.length > 0
+                  ? `${dcntsSelecionadas.length} DCNT(s) selecionada(s)`
+                  : "Nenhuma DCNT (Opcional)"}
+              </Text>
               <FontAwesome style={styles.icons} name="heartbeat" size={24} />
-            </View>
+            </TouchableOpacity>
+
             <View style={styles.boxBotton}>
               <TouchableOpacity
                 style={[styles.button, styles.tertiaryButton]}
@@ -353,7 +376,7 @@ export default function HomePage() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </ScrollView>
       ) : (
         <View>
           <Text style={styles.title}>Cognisus Mobile</Text>
@@ -374,7 +397,59 @@ export default function HomePage() {
           </Pressable>
         </View>
       )}
-    </View>
+      {/* --- MODAL DE SELEÇÃO DE MÚLTIPLAS DCNTs --- */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalDcntVisivel}
+        onRequestClose={() => setModalDcntVisivel(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecione as DCNTs</Text>
+
+            <FlatList
+              data={listaDCNT}
+              keyExtractor={(item) => item.id.toString()}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const isSelected = dcntsSelecionadas.includes(item.id);
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.checkboxContainer,
+                      isSelected && styles.checkboxSelected,
+                    ]}
+                    onPress={() => toggleDcnt(item.id)}
+                  >
+                    <Ionicons
+                      name={isSelected ? "checkbox" : "square-outline"}
+                      size={24}
+                      color={isSelected ? "#2563EB" : "#64748B"}
+                    />
+                    <Text
+                      style={[
+                        styles.checkboxLabel,
+                        isSelected && styles.checkboxLabelSelected,
+                      ]}
+                    >
+                      {item.tipo}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+
+            <TouchableOpacity
+              style={[styles.button, styles.primaryButton, { marginTop: 15 }]}
+              onPress={() => setModalDcntVisivel(false)}
+            >
+              <Text style={styles.primaryButtonText}>Concluído</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -382,6 +457,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
+    justifyContent: "center",
+    padding: 24,
+  },
+  scrollContainer: {
+    flexGrow: 1,
     justifyContent: "center",
     padding: 24,
   },
@@ -445,6 +525,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     width: "100%",
+    paddingHorizontal: 10,
   },
   button: {
     borderRadius: 12,
@@ -481,10 +562,58 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   icons: {
-    marginTop: 5,
-    marginLeft: 5,
+    marginTop: 4,
+    marginLeft: 4,
   },
   picker: {
     flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "85%",
+    maxHeight: "80%",
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#0F172A",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  checkboxSelected: {
+    backgroundColor: "#EFF6FF",
+    borderRadius: 8,
+    borderBottomWidth: 0,
+  },
+  checkboxLabel: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: "#334155",
+    flex: 1,
+  },
+  checkboxLabelSelected: {
+    color: "#2563EB",
+    fontWeight: "600",
   },
 });
