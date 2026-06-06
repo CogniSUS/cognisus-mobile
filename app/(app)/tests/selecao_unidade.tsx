@@ -1,123 +1,100 @@
 import { getDB } from "@/database/database";
-import {
-  FontAwesome5
-} from "@expo/vector-icons";
+import { useToast } from "@/hooks/useToast";
+import { FontAwesome5 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
   Dimensions,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-export default function SelecaoUnidade(){
-  const [unidadeSaude, setUnidadeSaude] = useState("");
+export default function SelecaoUnidade() {
+  const { error: showError } = useToast();
+
+  const [unidadeSaude, setUnidadeSaude] = useState<number | "">("");
+
   const [listaUnidades, setListaUnidades] = useState<
-  { id: number; nome: string }[]
+    { id: number; nome: string }[]
   >([]);
-  const [loading, setLoading] = useState(false);
 
-  async function getUnidade(){
-    try{
-      setLoading(true);
-
-      if (!unidadeSaude) {
-        setLoading(false);
-        return Alert.alert("Informe a unidade!");
-      }
-
-      await setTimeout(()=>{
-        Alert.alert("Logado com sucesso")
-        router.push("/tests/selection")
-        setLoading(false)
-      },3000)
+  function prosseguirParaTeste() {
+    if (unidadeSaude === "") {
+      return showError("Informe a unidade para prosseguir!");
     }
-    catch(error){
-      console.log(error)
-      setLoading(false)
+
+    router.push({
+      pathname: "/",
+      params: { unidadeId: unidadeSaude },
+    });
+  }
+
+  function voltarParaSelecao() {
+    router.replace("/tests/selection");
+  }
+
+  async function carregarUnidade() {
+    try {
+      const db = await getDB();
+      const dados = await db.getAllAsync<{ id: number; nome: string }>(
+        "SELECT * FROM unidade_saude",
+      );
+      setListaUnidades(dados);
+    } catch (error) {
+      console.log("Erro ao carregar unidades:", error);
     }
   }
 
-  async function carregarUnidade(){
-    const db = await getDB();
+  useEffect(() => {
+    carregarUnidade();
+  }, []);
 
-    const dados = await db.getAllAsync<{
-      id:number;
-      nome:string;
-    }>(
-      "SELECT * FROM unidade_saude"
-    )
+  return (
+    <View style={style.container}>
+      <View style={style.boxMid}>
+        <Text style={style.primarytext}>
+          Confirmação de Local de Atendimento
+        </Text>
+        <Text style={style.secondarytext}>
+          Por favor, confirme em qual unidade o teste será realizado.
+        </Text>
+        <View style={style.boxInput}>
+          <Picker
+            selectedValue={unidadeSaude}
+            onValueChange={(itemValue) => setUnidadeSaude(itemValue)}
+            style={style.picker}
+          >
+            <Picker.Item label="Selecione uma unidade" value="" />
 
-    setListaUnidades(dados);
-  }
-
-  useEffect(() => {carregarUnidade();}, []);
-
-    return(
-        <View style = {style.container}>
-            <View style = {style.boxMid}>
-                <Text style = {style.primarytext }>
-                  Confirmação de Local de Atendimento
-                  </Text>
-                  <Text style = {style.secondarytext}>
-                      Por favor, confirme em qual unidade o teste será realizado.
-                  </Text>
-                  <View style={style.boxInput}>
-
-                  <Picker
-                    selectedValue={unidadeSaude}
-                    onValueChange={(itemValue) => setUnidadeSaude(itemValue)}
-                    style={style.picker}
-                  >
-                    <Picker.Item
-                      label="Selecione uma unidade"
-                      value=""
-                    />
-
-                    {
-                      listaUnidades.map((item) => (
-                        <Picker.Item
-                          key={item.id}
-                          label={item.nome}
-                          value={item.id}
-                        />
-                      ))
-                    }
-                  </Picker>
-                  <FontAwesome5 style={style.icons} name="hospital" size={24} />
-                </View>
-                <View style={style.boxBotton}>
-
-                        <TouchableOpacity style={style.button} onPress={getUnidade}>
-                          {loading ? (
-                            <ActivityIndicator color={"white"} size={"small"} />
-                          ) : (
-                            <Text style={style.textButton}>Prosseguir para o teste</Text>
-                          )}
-                        </TouchableOpacity>
-                        <TouchableOpacity>
-                          <Text style={style.secondaryButton}
-                           onPress={() => router.back()}
-                          > voltar para a seleção do teste</Text>
-                          
-                        </TouchableOpacity>
-                      </View>
-            </View>
+            {listaUnidades.map((item) => (
+              <Picker.Item key={item.id} label={item.nome} value={item.id} />
+            ))}
+          </Picker>
+          <FontAwesome5 style={style.icons} name="hospital" size={24} />
         </View>
-    );
+        <View style={style.boxBotton}>
+          <TouchableOpacity style={style.button} onPress={prosseguirParaTeste}>
+            <Text style={style.textButton}>Prosseguir para o teste</Text>
+          </TouchableOpacity>
 
-
+          <TouchableOpacity onPress={voltarParaSelecao}>
+            <Text style={style.secondaryButton}>
+              voltar para a seleção do teste
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 }
 
 const style = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#c1b6ff",
-    justifyContent: "center",  
+    justifyContent: "center",
     padding: 24,
   },
 
@@ -127,7 +104,6 @@ const style = StyleSheet.create({
     marginTop: -10,
     backgroundColor: "#e3deff",
     borderRadius: 20,
-    
   },
   boxInput: {
     height: 60,
@@ -146,8 +122,6 @@ const style = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 10,
     marginTop: 10,
-    
-    
   },
   button: {
     height: 50,
@@ -180,7 +154,7 @@ const style = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 15,
     marginTop: 20,
-    marginLeft: 10, 
+    marginLeft: 10,
   },
   secondarytext: {
     fontSize: 16,
@@ -200,5 +174,5 @@ const style = StyleSheet.create({
   },
   picker: {
     flex: 1,
-}
+  },
 });
