@@ -1,17 +1,3 @@
-/**
- * Tela de seleção de teste cognitivo
- * - Exibe dados do paciente mockado
- * - Lista instrumentos de avaliação do SQLite
- * - Modal de confirmação ao selecionar teste
- * - Botão "Voltar ao Início" que navega para "/"
- *
- * Fluxo:
- * 1. Carregar instrumentos do SQLite ao montar
- * 2. Exibir lista de instrumentos
- * 3. Ao clicar em um instrumento, exibir modal
- * 4. Ao confirmar, navegar ou fechar modal
- * 5. Ao clicar "Voltar", retornar para home
- */
 import { InstrumentItem } from "@/components/ui/instrument-item";
 import { PatientCard } from "@/components/ui/patient-card";
 import { TestConfirmationModal } from "@/components/ui/test-confirmation-modal";
@@ -19,16 +5,28 @@ import { getAllInstruments } from "@/database/repositories/instrumentRepository"
 import { Instrument } from "@/types/instrument";
 import { Patient } from "@/types/patient";
 import { useFocusEffect } from "@react-navigation/native";
-import { router } from "expo-router";
-import { useCallback, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+
+type SexoPaciente = "masculino" | "feminino" | "outro";
+
 export default function TestSelectionPage() {
+  const params = useLocalSearchParams<{
+    patientId?: string;
+    nome?: string;
+    cpf?: string;
+    dataNascimento?: string;
+    sexo?: string;
+    escolaridade?: string;
+  }>();
+
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInstrument, setSelectedInstrument] =
@@ -36,21 +34,31 @@ export default function TestSelectionPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const mockPatient: Patient = {
-    id: 1,
-    nome_completo: "João da Silva Neto",
-    cpf: "123.456.789-10",
-    data_nascimento: "1958-05-21", // 66 anos
-    sexo: "masculino",
-    escolaridade: 4,
-  };
+  function normalizeSexo(value?: string): SexoPaciente {
+    if (value === "masculino" || value === "feminino" || value === "outro") {
+      return value;
+    }
 
-  // Carregar instrumentos do SQLite ao focar na tela
+    return "outro";
+  }
+
+  const selectedPatient = useMemo<Patient>(() => {
+    return {
+      id: Number(params.patientId || 0),
+      nome_completo: params.nome || "Paciente não informado",
+      cpf: params.cpf || "",
+      data_nascimento: params.dataNascimento || "",
+      sexo: normalizeSexo(params.sexo),
+      escolaridade: Number(params.escolaridade || 0),
+    };
+  }, [params]);
+
   useFocusEffect(
     useCallback(() => {
       loadInstruments();
     }, []),
   );
+
   async function loadInstruments() {
     try {
       setLoading(true);
@@ -62,32 +70,45 @@ export default function TestSelectionPage() {
       setLoading(false);
     }
   }
+
   function handleSelectInstrument(instrument: Instrument) {
     setSelectedInstrument(instrument);
     setShowConfirmation(true);
   }
+
   async function handleConfirm() {
-    // Por enquanto, apenas fechar o modal
-    // Futuramente: navegar para tela de execução do teste
+    if (!selectedInstrument) return;
+
     setIsConfirming(true);
 
-    // Simular pequeno delay
-    setTimeout(() => {
-      setShowConfirmation(false);
-      setSelectedInstrument(null);
-      setIsConfirming(false);
+    router.push({
+      pathname: "/tests/selecao_unidade",
+      params: {
+        patientId: String(selectedPatient.id),
+        nome: selectedPatient.nome_completo,
+        cpf: selectedPatient.cpf,
+        dataNascimento: selectedPatient.data_nascimento,
+        sexo: selectedPatient.sexo,
+        escolaridade: String(selectedPatient.escolaridade),
+        instrumentId: String(selectedInstrument.id),
+        instrumentNome: selectedInstrument.nome,
+      },
+    });
 
-      // Toast de sucesso (se tiver useToast disponível)
-      // showSuccess("Teste iniciado!");
-    }, 500);
+    setShowConfirmation(false);
+    setSelectedInstrument(null);
+    setIsConfirming(false);
   }
+
   function handleCancel() {
     setShowConfirmation(false);
     setSelectedInstrument(null);
   }
+
   function handleBackToHome() {
     router.push("/");
   }
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -95,16 +116,15 @@ export default function TestSelectionPage() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Patient Card */}
-        <PatientCard patient={mockPatient} />
-        {/* Título da Seção */}
+        <PatientCard patient={selectedPatient} />
+
         <View style={styles.titleSection}>
           <Text style={styles.title}>Selecione o Teste Cognitivo</Text>
           <Text style={styles.subtitle}>
             Escolha um ou mais testes para aplicar
           </Text>
         </View>
-        {/* Lista de Instrumentos */}
+
         {loading ? (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Carregando instrumentos...</Text>
@@ -127,7 +147,7 @@ export default function TestSelectionPage() {
             </Text>
           </View>
         )}
-        {/* Botão Voltar */}
+
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.outlineButton}
@@ -138,11 +158,11 @@ export default function TestSelectionPage() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-      {/* Modal de Confirmação */}
+
       {selectedInstrument && (
         <TestConfirmationModal
           visible={showConfirmation}
-          patient={mockPatient}
+          patient={selectedPatient}
           instrument={selectedInstrument}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
@@ -152,6 +172,7 @@ export default function TestSelectionPage() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -206,7 +227,7 @@ const styles = StyleSheet.create({
   },
   outlineButton: {
     borderWidth: 1.5,
-    borderColor: "#A824EE", // Ajuste para o HEX exato do roxo do seu design (ex: #9333EA)
+    borderColor: "#A824EE",
     backgroundColor: "transparent",
     paddingVertical: 14,
     borderRadius: 16,
@@ -214,7 +235,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   outlineButtonText: {
-    color: "#A824EE", // Deve ser a mesma cor da borda
+    color: "#A824EE",
     fontSize: 14,
     fontWeight: "500",
   },

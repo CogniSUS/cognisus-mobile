@@ -32,6 +32,7 @@ type PacienteBusca = {
   nome_completo: string;
   cpf: string;
   data_nascimento: string;
+  sexo: "masculino" | "feminino" | "outro";
   escolaridade_nome: string | null;
   ultima_avaliacao: string | null;
 };
@@ -200,6 +201,7 @@ export default function HomePage() {
           p.nome_completo,
           p.cpf,
           p.data_nascimento,
+          p.sexo,
           e.tipo AS escolaridade_nome,
           (
             SELECT COALESCE(a.data_fim, a.data_inicio, a.created_at)
@@ -359,7 +361,17 @@ export default function HomePage() {
       return;
     }
 
-    router.push("/tests/selection");
+    router.push({
+      pathname: "/tests/selection",
+      params: {
+        patientId: String(pacienteEncontrado.id),
+        nome: pacienteEncontrado.nome_completo,
+        cpf: pacienteEncontrado.cpf,
+        dataNascimento: pacienteEncontrado.data_nascimento,
+        sexo: pacienteEncontrado.sexo,
+        escolaridade: pacienteEncontrado.escolaridade_nome ?? "",
+      },
+    });
   }
 
   useEffect(() => {
