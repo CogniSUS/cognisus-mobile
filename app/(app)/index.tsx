@@ -1,5 +1,6 @@
 import { getDB } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   AntDesign,
   FontAwesome,
@@ -8,7 +9,7 @@ import {
 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -25,14 +26,25 @@ import {
   View,
 } from "react-native";
 
+type PacienteBusca = {
+  id: number;
+  nome_completo: string;
+  cpf: string;
+  data_nascimento: string;
+  escolaridade_nome: string | null;
+  ultima_avaliacao: string | null;
+};
+
 export default function HomePage() {
+  const { user } = useAuth();
+
   const [mostrarCadastro, setMostrarCadastro] = useState(false);
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
   const [sexo, setSexo] = useState("");
   const [escolaridade, setEscolaridade] = useState("");
-  const [dcnt, setDCNT] = useState("");
+
   const [loading, setLoading] = useState(false);
 
   const [dcntsSelecionadas, setDcntsSelecionadas] = useState<number[]>([]);
@@ -45,15 +57,31 @@ export default function HomePage() {
     [],
   );
 
+  const [cpfBusca, setCpfBusca] = useState("");
+  const [buscandoPaciente, setBuscandoPaciente] = useState(false);
+  const [pacienteEncontrado, setPacienteEncontrado] =
+    useState<PacienteBusca | null>(null);
+  const [pacienteNaoEncontrado, setPacienteNaoEncontrado] = useState(false);
+
   const { success: showSuccess, error: showError, info: showInfo } = useToast();
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const nomeProfissional = useMemo(() => {
+    return user?.user_metadata?.nome_completo || user?.email || "Profissional";
+  }, [user]);
 
   function formatCpf(value: string) {
     const digits = value.replace(/\D/g, "").slice(0, 11);
     if (digits.length <= 3) return digits;
     if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-    if (digits.length <= 9)
+    if (digits.length <= 9) {
       return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+    }
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(
+      6,
+      9,
+    )}-${digits.slice(9)}`;
   }
 
   function limparCampos() {
@@ -62,17 +90,66 @@ export default function HomePage() {
     setDataNascimento("");
     setSexo("");
     setEscolaridade("");
-    setDCNT("");
+    setDcntsSelecionadas([]);
+  }
+
+  function limparBuscaPaciente() {
+    setCpfBusca("");
+    setPacienteEncontrado(null);
+    setPacienteNaoEncontrado(false);
   }
 
   function toggleDcnt(id: number) {
     setDcntsSelecionadas((prev) => {
       if (prev.includes(id)) {
         return prev.filter((item) => item !== id);
-      } else {
-        return [...prev, id];
       }
+      return [...prev, id];
     });
+  }
+
+  function formatarDataBR(dataISO: string | null) {
+    if (!dataISO) return "Nenhuma avaliação registrada";
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dataISO)) {
+      const [ano, mes, dia] = dataISO.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    const data = new Date(dataISO);
+    if (Number.isNaN(data.getTime())) return "Nenhuma avaliação registrada";
+
+    return data.toLocaleDateString("pt-BR");
+  }
+
+  function calcularIdade(dataISO: string) {
+    let ano = 0;
+    let mes = 0;
+    let dia = 0;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dataISO)) {
+      const partes = dataISO.split("-");
+      ano = Number(partes[0]);
+      mes = Number(partes[1]) - 1;
+      dia = Number(partes[2]);
+    } else {
+      const nascimento = new Date(dataISO);
+      ano = nascimento.getFullYear();
+      mes = nascimento.getMonth();
+      dia = nascimento.getDate();
+    }
+
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - ano;
+
+    if (
+      hoje.getMonth() < mes ||
+      (hoje.getMonth() === mes && hoje.getDate() < dia)
+    ) {
+      idade--;
+    }
+
+    return idade;
   }
 
   async function carregarEscolaridades() {
@@ -95,6 +172,63 @@ export default function HomePage() {
     }>("SELECT * FROM dcnt");
 
     setListaDCNT(dados);
+  }
+
+  async function buscarPacientePorCpf() {
+    try {
+      setBuscandoPaciente(true);
+      setPacienteEncontrado(null);
+      setPacienteNaoEncontrado(false);
+
+      const cpfNumeros = cpfBusca.replace(/\D/g, "");
+
+      if (!cpfNumeros) {
+        return;
+      }
+
+      if (cpfNumeros.length !== 11) {
+        return;
+      }
+
+      const db = await getDB();
+
+      const paciente = await db.getFirstAsync<PacienteBusca>(
+        `
+        SELECT
+          p.id,
+          p.nome_completo,
+          p.cpf,
+          p.data_nascimento,
+          e.tipo AS escolaridade_nome,
+          (
+            SELECT COALESCE(a.data_fim, a.data_inicio, a.created_at)
+            FROM avaliacao_teste_meem a
+            WHERE a.id_paciente = p.id
+              AND a.deleted_at IS NULL
+            ORDER BY datetime(COALESCE(a.data_fim, a.data_inicio, a.created_at)) DESC
+            LIMIT 1
+          ) AS ultima_avaliacao
+        FROM paciente p
+        LEFT JOIN escolaridade e ON e.id = p.escolaridade
+        WHERE p.cpf = ?
+          AND p.deleted_at IS NULL
+        LIMIT 1
+        `,
+        [cpfNumeros],
+      );
+
+      if (!paciente) {
+        setPacienteNaoEncontrado(true);
+        return;
+      }
+
+      setPacienteEncontrado(paciente);
+    } catch (error) {
+      console.log(error);
+      showError("Erro ao buscar paciente.");
+    } finally {
+      setBuscandoPaciente(false);
+    }
   }
 
   async function cadastrarPaciente() {
@@ -170,7 +304,6 @@ export default function HomePage() {
 
           const pacienteId = resultado.lastInsertRowId;
 
-          // Inserindo todas as DCNTs do array
           for (const dcntId of dcntsSelecionadas) {
             await db.runAsync(
               `INSERT INTO paciente_dcnt (created_at, sync_status, id_paciente, id_dcnt)
@@ -181,15 +314,10 @@ export default function HomePage() {
 
           const pacientePersistido = await db.getAllAsync<{
             id: number;
-
             nome_completo: string;
-
             cpf: string;
-
             data_nascimento: string;
-
             sexo: string;
-
             escolaridade: number;
           }>(`SELECT * FROM paciente WHERE id = ?`, [pacienteId]);
 
@@ -197,15 +325,12 @@ export default function HomePage() {
 
           const pacienteDcntPersistido = await db.getAllAsync<{
             id: number;
-
             id_paciente: number;
-
             id_dcnt: number;
           }>(`SELECT * FROM paciente_dcnt WHERE id_paciente = ?`, [pacienteId]);
 
           console.log(
             "Paciente_DCNT recuperado do banco local",
-
             pacienteDcntPersistido,
           );
         });
@@ -213,6 +338,7 @@ export default function HomePage() {
         showSuccess("Paciente cadastrado com sucesso!");
         limparCampos();
         setMostrarCadastro(false);
+        setCpfBusca(cpf);
         setLoading(false);
       } catch (dbError) {
         console.log("Erro SQLite:", dbError);
@@ -226,6 +352,15 @@ export default function HomePage() {
     }
   }
 
+  function iniciarRastreio() {
+    if (!pacienteEncontrado) {
+      showInfo("Selecione um paciente válido.");
+      return;
+    }
+
+    router.push("/tests/selection");
+  }
+
   useEffect(() => {
     async function carregarDados() {
       await carregarEscolaridades();
@@ -234,6 +369,36 @@ export default function HomePage() {
 
     carregarDados();
   }, []);
+
+  useEffect(() => {
+    const cpfNumeros = cpfBusca.replace(/\D/g, "");
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    if (!cpfNumeros) {
+      setPacienteEncontrado(null);
+      setPacienteNaoEncontrado(false);
+      return;
+    }
+
+    if (cpfNumeros.length < 11) {
+      setPacienteEncontrado(null);
+      setPacienteNaoEncontrado(false);
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => {
+      buscarPacientePorCpf();
+    }, 350);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [cpfBusca]);
 
   return (
     <KeyboardAvoidingView
@@ -248,6 +413,7 @@ export default function HomePage() {
           <View style={styles.boxTop}>
             <Text style={styles.text}>Cadastro de Paciente</Text>
           </View>
+
           <View style={styles.boxMid}>
             <View style={styles.boxInput}>
               <TextInput
@@ -259,6 +425,7 @@ export default function HomePage() {
               />
               <AntDesign style={styles.icons} name="smile" size={24} />
             </View>
+
             <View style={styles.boxInput}>
               <TextInput
                 placeholder="Digite seu CPF"
@@ -270,6 +437,7 @@ export default function HomePage() {
               />
               <FontAwesome style={styles.icons} name="id-card-o" size={24} />
             </View>
+
             <View style={styles.boxInput}>
               <TextInput
                 placeholder="Data de nascimento"
@@ -299,6 +467,7 @@ export default function HomePage() {
                 size={24}
               />
             </View>
+
             <View style={styles.boxInput}>
               <Picker
                 selectedValue={sexo}
@@ -306,11 +475,8 @@ export default function HomePage() {
                 style={styles.picker}
               >
                 <Picker.Item label="Selecione o sexo" value="" />
-
                 <Picker.Item label="Masculino" value="masculino" />
-
                 <Picker.Item label="Feminino" value="feminino" />
-
                 <Picker.Item label="Outro" value="outro" />
               </Picker>
               <FontAwesome style={styles.icons} name="intersex" size={24} />
@@ -379,25 +545,114 @@ export default function HomePage() {
         </ScrollView>
       ) : (
         <View>
-          <Text style={styles.title}>Cognisus Mobile</Text>
+          <Text style={styles.greeting}>Olá, {nomeProfissional}</Text>
 
-          <Text style={styles.subtitle}>Aplicativo de triagem cognitiva</Text>
+          {!pacienteEncontrado && (
+            <Pressable style={styles.bannerButton} onPress={() => router.push("/tests/selection")}>
+              <View>
+                <Text style={styles.bannerText}>INICIAR RASTREIO</Text>
+                <Text style={styles.bannerText}>COGNITIVO</Text>
+              </View>
 
-          <Pressable
-            style={[styles.button, styles.secondaryButton]}
-            onPress={() => router.push("/tests")}
-          >
-            <Text style={styles.secondaryButtonText}>Testes</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.button, styles.secondaryButton]}
-            onPress={() => setMostrarCadastro(true)}
-          >
-            <Text style={styles.secondaryButtonText}>Cadastro de paciente</Text>
-          </Pressable>
+              <View style={styles.bannerCircle}>
+                <Ionicons name="add" size={28} color="#A21CAF" />
+              </View>
+            </Pressable>
+          )}
+
+          <Text style={styles.searchTitle}>Buscar Paciente por CPF</Text>
+
+          <View style={styles.searchBox}>
+            <Ionicons name="search-outline" size={20} color="#94A3B8" />
+            <TextInput
+              placeholder="123.456.789-00"
+              keyboardType="numeric"
+              style={styles.searchInput}
+              value={cpfBusca}
+              maxLength={14}
+              onChangeText={(text) => setCpfBusca(formatCpf(text))}
+            />
+            {cpfBusca.length > 0 && (
+              <Pressable onPress={limparBuscaPaciente}>
+                <Ionicons name="close" size={20} color="#94A3B8" />
+              </Pressable>
+            )}
+          </View>
+
+          {buscandoPaciente && (
+            <ActivityIndicator style={styles.searchLoading} color="#A21CAF" />
+          )}
+
+          {pacienteEncontrado && (
+            <>
+              <View style={styles.identityCard}>
+                <Text style={styles.identityTitle}>CONFIRMAÇÃO DE IDENTIDADE</Text>
+
+                <Text style={styles.identityText}>
+                  <Text style={styles.identityLabel}>Nome:</Text>{" "}
+                  {pacienteEncontrado.nome_completo}
+                </Text>
+
+                <Text style={styles.identityText}>
+                  <Text style={styles.identityLabel}>CPF:</Text>{" "}
+                  {formatCpf(pacienteEncontrado.cpf)}
+                </Text>
+
+                <Text style={styles.identityText}>
+                  <Text style={styles.identityLabel}>Data de Nascimento:</Text>{" "}
+                  {formatarDataBR(pacienteEncontrado.data_nascimento)}
+                </Text>
+
+                <Text style={styles.identityText}>
+                  <Text style={styles.identityLabel}>Idade:</Text>{" "}
+                  {calcularIdade(pacienteEncontrado.data_nascimento)} anos
+                </Text>
+
+                <Text style={styles.identityText}>
+                  <Text style={styles.identityLabel}>Escolaridade:</Text>{" "}
+                  {pacienteEncontrado.escolaridade_nome ?? "Não informada"}
+                </Text>
+
+                <View style={styles.divider} />
+
+                <Text style={styles.identityTitle}>HISTÓRICO</Text>
+
+                <Text style={styles.identityText}>
+                  <Text style={styles.identityLabel}>
+                    Data da última avaliação:
+                  </Text>{" "}
+                  {formatarDataBR(pacienteEncontrado.ultima_avaliacao)}
+                </Text>
+              </View>
+
+              <Pressable style={styles.startButton} onPress={iniciarRastreio}>
+                <Text style={styles.startButtonText}>INICIAR RASTREIO</Text>
+                <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+              </Pressable>
+
+              <Pressable onPress={limparBuscaPaciente}>
+                <Text style={styles.cancelText}>Voltar / Cancelar</Text>
+              </Pressable>
+            </>
+          )}
+
+          {pacienteNaoEncontrado && (
+            <View style={styles.notFoundCard}>
+              <Text style={styles.notFoundText}>Paciente não encontrado</Text>
+
+              <Pressable
+                style={styles.notFoundButton}
+                onPress={() => setMostrarCadastro(true)}
+              >
+                <Text style={styles.notFoundButtonText}>
+                  Cadastrar Novo Paciente
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       )}
-      {/* --- MODAL DE SELEÇÃO DE MÚLTIPLAS DCNTs --- */}
+
       <Modal
         animationType="slide"
         transparent={true}
@@ -414,6 +669,7 @@ export default function HomePage() {
               showsVerticalScrollIndicator={false}
               renderItem={({ item }) => {
                 const isSelected = dcntsSelecionadas.includes(item.id);
+
                 return (
                   <TouchableOpacity
                     style={[
@@ -553,7 +809,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
   },
-
   tertiaryButtonText: {
     fontSize: 20,
     fontWeight: "800",
@@ -615,5 +870,133 @@ const styles = StyleSheet.create({
   checkboxLabelSelected: {
     color: "#2563EB",
     fontWeight: "600",
+  },
+  greeting: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 18,
+  },
+  bannerButton: {
+    marginBottom: 20,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    backgroundColor: "#A21CAF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  bannerText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  bannerCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginBottom: 12,
+  },
+  searchBox: {
+    height: 50,
+    borderWidth: 1.5,
+    borderColor: "#C084FC",
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  searchLoading: {
+    marginTop: 16,
+  },
+  identityCard: {
+    marginTop: 18,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  identityTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginBottom: 12,
+  },
+  identityText: {
+    fontSize: 16,
+    color: "#334155",
+    marginBottom: 8,
+  },
+  identityLabel: {
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 14,
+  },
+  startButton: {
+    marginTop: 18,
+    backgroundColor: "#A21CAF",
+    borderRadius: 14,
+    minHeight: 54,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  startButtonText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  cancelText: {
+    marginTop: 14,
+    textAlign: "center",
+    color: "#7C3AED",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  notFoundCard: {
+    marginTop: 18,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E9D5FF",
+  },
+  notFoundText: {
+    fontSize: 16,
+    color: "#475569",
+    marginBottom: 14,
+  },
+  notFoundButton: {
+    backgroundColor: "#A21CAF",
+    borderRadius: 12,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notFoundButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
