@@ -8,6 +8,7 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -548,15 +549,26 @@ export default function HomePage() {
           <Text style={styles.greeting}>Olá, {nomeProfissional}</Text>
 
           {!pacienteEncontrado && (
-            <Pressable style={styles.bannerButton} onPress={() => router.push("/tests/selection")}>
-              <View>
-                <Text style={styles.bannerText}>INICIAR RASTREIO</Text>
-                <Text style={styles.bannerText}>COGNITIVO</Text>
-              </View>
+            <Pressable
+              onPress={() => {
+                showInfo("Busque um paciente por CPF para iniciar o rastreio.");
+              }}
+            >
+              <LinearGradient
+                colors={["#B12CF7", "#9D22F0", "#8A18E8"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.bannerButton}
+              >
+                <View>
+                  <Text style={styles.bannerText}>INICIAR RASTREIO</Text>
+                  <Text style={styles.bannerText}>COGNITIVO</Text>
+                </View>
 
-              <View style={styles.bannerCircle}>
-                <Ionicons name="add" size={28} color="#A21CAF" />
-              </View>
+                <View style={styles.bannerCircle}>
+                  <Ionicons name="add" size={28} color="#A21CAF" />
+                </View>
+              </LinearGradient>
             </Pressable>
           )}
 
@@ -625,9 +637,16 @@ export default function HomePage() {
                 </Text>
               </View>
 
-              <Pressable style={styles.startButton} onPress={iniciarRastreio}>
-                <Text style={styles.startButtonText}>INICIAR RASTREIO</Text>
-                <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+              <Pressable onPress={iniciarRastreio}>
+                <LinearGradient
+                  colors={["#B12CF7", "#9D22F0", "#8A18E8"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.startButton}
+                >
+                  <Text style={styles.startButtonText}>INICIAR RASTREIO</Text>
+                  <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+                </LinearGradient>
               </Pressable>
 
               <Pressable onPress={limparBuscaPaciente}>
@@ -640,13 +659,17 @@ export default function HomePage() {
             <View style={styles.notFoundCard}>
               <Text style={styles.notFoundText}>Paciente não encontrado</Text>
 
-              <Pressable
-                style={styles.notFoundButton}
-                onPress={() => setMostrarCadastro(true)}
-              >
-                <Text style={styles.notFoundButtonText}>
-                  Cadastrar Novo Paciente
-                </Text>
+              <Pressable onPress={() => setMostrarCadastro(true)}>
+                <LinearGradient
+                  colors={["#B12CF7", "#9D22F0", "#8A18E8"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.notFoundButton}
+                >
+                  <Text style={styles.notFoundButtonText}>
+                    Cadastrar Novo Paciente
+                  </Text>
+                </LinearGradient>
               </Pressable>
             </View>
           )}
@@ -712,15 +735,16 @@ export default function HomePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
-    justifyContent: "center",
-    padding: 24,
+    backgroundColor: "#F3F2F8",
+    paddingHorizontal: 24,
+    paddingTop: 18,
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: "center",
-    padding: 24,
-  },
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 32,
+    },
   boxTop: {
     height: Dimensions.get("window").height / 5.3,
     width: "100%",
@@ -872,108 +896,137 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   greeting: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "600",
-    color: "#475569",
+    color: "#42526B",
     marginBottom: 18,
+    marginTop: 6,
   },
+
   bannerButton: {
-    marginBottom: 20,
-    borderRadius: 16,
+    marginBottom: 24,
+    borderRadius: 18,
     paddingVertical: 18,
     paddingHorizontal: 18,
-    backgroundColor: "#A21CAF",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    shadowColor: "#A020F0",
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
+
   bannerText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "800",
+    lineHeight: 22,
   },
+
   bannerCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
+
   searchTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#1E293B",
+    color: "#1F2A44",
     marginBottom: 12,
   },
+
   searchBox: {
-    height: 50,
+    height: 52,
     borderWidth: 1.5,
-    borderColor: "#C084FC",
-    borderRadius: 12,
+    borderColor: "#C77DFF",
+    borderRadius: 14,
     backgroundColor: "#FFFFFF",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
     gap: 8,
   },
+
   searchInput: {
     flex: 1,
     fontSize: 16,
+    color: "#1F2937",
   },
-  searchLoading: {
-    marginTop: 16,
-  },
+
   identityCard: {
     marginTop: 18,
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 18,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#E6E1F0",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
+
   identityTitle: {
     fontSize: 17,
-    fontWeight: "700",
-    color: "#1E293B",
+    fontWeight: "800",
+    color: "#1F2A44",
     marginBottom: 12,
   },
+
   identityText: {
-    fontSize: 16,
-    color: "#334155",
+    fontSize: 15,
+    color: "#445066",
     marginBottom: 8,
+    lineHeight: 22,
   },
+
   identityLabel: {
-    fontWeight: "700",
-    color: "#0F172A",
+    fontWeight: "800",
+    color: "#1F2A44",
   },
+
   divider: {
     height: 1,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#E6E6EF",
     marginVertical: 14,
   },
+
   startButton: {
-    marginTop: 18,
-    backgroundColor: "#A21CAF",
-    borderRadius: 14,
-    minHeight: 54,
+    marginTop: 20,
+    borderRadius: 16,
+    minHeight: 56,
     paddingHorizontal: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    shadowColor: "#A020F0",
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
+
   startButtonText: {
     color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "800",
   },
+
   cancelText: {
-    marginTop: 14,
+    marginTop: 16,
     textAlign: "center",
-    color: "#7C3AED",
+    color: "#6C63FF",
     fontSize: 15,
     fontWeight: "600",
   },
+
   notFoundCard: {
     marginTop: 18,
     backgroundColor: "#FFFFFF",
@@ -981,22 +1034,33 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: "#E9D5FF",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
+
   notFoundText: {
-    fontSize: 16,
-    color: "#475569",
+    fontSize: 15,
+    color: "#5B657C",
     marginBottom: 14,
   },
+
   notFoundButton: {
-    backgroundColor: "#A21CAF",
     borderRadius: 12,
     minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
   },
+
   notFoundButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  searchLoading: {
+    marginTop: 16,
   },
 });
