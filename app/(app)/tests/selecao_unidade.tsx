@@ -2,7 +2,7 @@ import { getDB } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Dimensions,
@@ -11,11 +11,22 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 export default function SelecaoUnidade() {
-  const { error: showError } = useToast();
+  const { error: showError, info: showInfo } = useToast();
+
+  const params = useLocalSearchParams<{
+    patientId?: string;
+    nome?: string;
+    cpf?: string;
+    dataNascimento?: string;
+    sexo?: string;
+    escolaridade?: string;
+    instrumentId?: string;
+    instrumentNome?: string;
+  }>();
 
   const [unidadeSaude, setUnidadeSaude] = useState<number | "">("");
-
   const [listaUnidades, setListaUnidades] = useState<
     { id: number; nome: string }[]
   >([]);
@@ -25,14 +36,32 @@ export default function SelecaoUnidade() {
       return showError("Informe a unidade para prosseguir!");
     }
 
+    showInfo(
+      `Teste "${params.instrumentNome || "selecionado"}" confirmado para ${params.nome || "o paciente"}.`,
+    );
+
     router.push({
       pathname: "/",
-      params: { unidadeId: unidadeSaude },
+      params: {
+        unidadeId: String(unidadeSaude),
+        patientId: params.patientId,
+        instrumentId: params.instrumentId,
+      },
     });
   }
 
   function voltarParaSelecao() {
-    router.replace("/tests/selection");
+    router.replace({
+      pathname: "/tests/selection",
+      params: {
+        patientId: params.patientId,
+        nome: params.nome,
+        cpf: params.cpf,
+        dataNascimento: params.dataNascimento,
+        sexo: params.sexo,
+        escolaridade: params.escolaridade,
+      },
+    });
   }
 
   async function carregarUnidade() {
@@ -57,9 +86,11 @@ export default function SelecaoUnidade() {
         <Text style={style.primarytext}>
           Confirmação de Local de Atendimento
         </Text>
+
         <Text style={style.secondarytext}>
           Por favor, confirme em qual unidade o teste será realizado.
         </Text>
+
         <View style={style.boxInput}>
           <Picker
             selectedValue={unidadeSaude}
@@ -72,8 +103,10 @@ export default function SelecaoUnidade() {
               <Picker.Item key={item.id} label={item.nome} value={item.id} />
             ))}
           </Picker>
+
           <FontAwesome5 style={style.icons} name="hospital" size={24} />
         </View>
+
         <View style={style.boxBotton}>
           <TouchableOpacity style={style.button} onPress={prosseguirParaTeste}>
             <Text style={style.textButton}>Prosseguir para o teste</Text>
@@ -162,11 +195,6 @@ const style = StyleSheet.create({
     justifyContent: "center",
     marginLeft: 10,
     marginBottom: 15,
-  },
-  input: {
-    flex: 1,
-    height: "100%",
-    width: "100%",
   },
   icons: {
     marginTop: 11,
