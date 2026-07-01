@@ -19,11 +19,32 @@ export const meemSteps: TestStep[] = [
         id: "ot_dia_semana",
         label: "Em que dia da semana estamos?",
         points: 1,
+        dominio: "orientacao_temporal",
       },
-      { id: "ot_dia_mes", label: "Em que dia do mês estamos?", points: 1 },
-      { id: "ot_mes", label: "Em que mês estamos?", points: 1 },
-      { id: "ot_ano", label: "Em que ano estamos?", points: 1 },
-      { id: "ot_estacao", label: "Em que estação do ano estamos?", points: 1 },
+      {
+        id: "ot_dia_mes",
+        label: "Em que dia do mês estamos?",
+        points: 1,
+        dominio: "orientacao_temporal",
+      },
+      {
+        id: "ot_mes",
+        label: "Em que mês estamos?",
+        points: 1,
+        dominio: "orientacao_temporal",
+      },
+      {
+        id: "ot_ano",
+        label: "Em que ano estamos?",
+        points: 1,
+        dominio: "orientacao_temporal",
+      },
+      {
+        id: "ot_estacao",
+        label: "Em que estação do ano estamos?",
+        points: 1,
+        dominio: "orientacao_temporal",
+      },
     ],
   },
 
@@ -32,14 +53,35 @@ export const meemSteps: TestStep[] = [
     id: "orientacao_espacial",
     title: "Orientação Espacial",
     questions: [
-      { id: "oe_pais", label: "Em que país estamos?", points: 1 },
-      { id: "oe_estado", label: "Em que estado estamos?", points: 1 },
-      { id: "oe_cidade", label: "Em que cidade estamos?", points: 1 },
-      { id: "oe_bairro", label: "Em que bairro estamos?", points: 1 },
+      {
+        id: "oe_pais",
+        label: "Em que país estamos?",
+        points: 1,
+        dominio: "orientacao_espacial",
+      },
+      {
+        id: "oe_estado",
+        label: "Em que estado estamos?",
+        points: 1,
+        dominio: "orientacao_espacial",
+      },
+      {
+        id: "oe_cidade",
+        label: "Em que cidade estamos?",
+        points: 1,
+        dominio: "orientacao_espacial",
+      },
+      {
+        id: "oe_bairro",
+        label: "Em que bairro estamos?",
+        points: 1,
+        dominio: "orientacao_espacial",
+      },
       {
         id: "oe_local",
         label: "Em que local estamos (hospital, casa, clínica)?",
         points: 1,
+        dominio: "orientacao_espacial",
       },
     ],
   },
@@ -51,9 +93,24 @@ export const meemSteps: TestStep[] = [
     instruction:
       'Diga ao paciente: "Vou dizer três palavras e quero que repita depois de mim: CARRO, VASO, TIJOLO"',
     questions: [
-      { id: "reg_carro", label: "Repetiu CARRO?", points: 1 },
-      { id: "reg_vaso", label: "Repetiu VASO?", points: 1 },
-      { id: "reg_tijolo", label: "Repetiu TIJOLO?", points: 1 },
+      {
+        id: "reg_carro",
+        label: "Repetiu CARRO?",
+        points: 1,
+        dominio: "memoria_imediata",
+      },
+      {
+        id: "reg_vaso",
+        label: "Repetiu VASO?",
+        points: 1,
+        dominio: "memoria_imediata",
+      },
+      {
+        id: "reg_tijolo",
+        label: "Repetiu TIJOLO?",
+        points: 1,
+        dominio: "memoria_imediata",
+      },
     ],
   },
 
@@ -64,11 +121,11 @@ export const meemSteps: TestStep[] = [
     instruction:
       'Peça ao paciente: "Subtraia 7 de 100 e continue subtraindo 7 do resultado até eu mandar parar"',
     questions: [
-      { id: "calc_93", label: "93 (100-7)", points: 1 },
-      { id: "calc_86", label: "86 (93-7)", points: 1 },
-      { id: "calc_79", label: "79 (86-7)", points: 1 },
-      { id: "calc_72", label: "72 (79-7)", points: 1 },
-      { id: "calc_65", label: "65 (72-7)", points: 1 },
+      { id: "calc_93", label: "93 (100-7)", points: 1, dominio: "atencao" },
+      { id: "calc_86", label: "86 (93-7)", points: 1, dominio: "atencao" },
+      { id: "calc_79", label: "79 (86-7)", points: 1, dominio: "atencao" },
+      { id: "calc_72", label: "72 (79-7)", points: 1, dominio: "atencao" },
+      { id: "calc_65", label: "65 (72-7)", points: 1, dominio: "atencao" },
     ],
   },
 
@@ -79,9 +136,24 @@ export const meemSteps: TestStep[] = [
     instruction:
       'Pergunte: "Quais foram as três palavras que pedi para repetir?"',
     questions: [
-      { id: "evo_carro", label: "Lembrou CARRO?", points: 1 },
-      { id: "evo_vaso", label: "Lembrou VASO?", points: 1 },
-      { id: "evo_tijolo", label: "Lembrou TIJOLO?", points: 1 },
+      {
+        id: "evo_carro",
+        label: "Lembrou CARRO?",
+        points: 1,
+        dominio: "memoria_recente",
+      },
+      {
+        id: "evo_vaso",
+        label: "Lembrou VASO?",
+        points: 1,
+        dominio: "memoria_recente",
+      },
+      {
+        id: "evo_tijolo",
+        label: "Lembrou TIJOLO?",
+        points: 1,
+        dominio: "memoria_recente",
+      },
     ],
   },
 
@@ -92,8 +164,18 @@ export const meemSteps: TestStep[] = [
     instruction: 'Mostre objetos e pergunte: "O que é isto?"',
     hasTimer: true,
     questions: [
-      { id: "nom_relogio", label: "Nomeou o relógio?", points: 1 },
-      { id: "nom_caneta", label: "Nomeou a caneta?", points: 1 },
+      {
+        id: "nom_relogio",
+        label: "Nomeou o relógio?",
+        points: 1,
+        dominio: "linguagem",
+      },
+      {
+        id: "nom_caneta",
+        label: "Nomeou a caneta?",
+        points: 1,
+        dominio: "linguagem",
+      },
     ],
   },
 
@@ -102,7 +184,14 @@ export const meemSteps: TestStep[] = [
     id: "repeticao",
     title: "Repetição",
     instruction: 'Peça: "Repita a frase: NEM AQUI, NEM ALI, NEM LÁ"',
-    questions: [{ id: "rep_frase", label: "Repetiu corretamente?", points: 1 }],
+    questions: [
+      {
+        id: "rep_frase",
+        label: "Repetiu corretamente?",
+        points: 1,
+        dominio: "linguagem",
+      },
+    ],
   },
 
   // --- ETAPA 9/12 ---
@@ -112,9 +201,24 @@ export const meemSteps: TestStep[] = [
     instruction:
       'Diga: "Pegue este papel com a mão direita, dobre ao meio e coloque no chão"',
     questions: [
-      { id: "com_direita", label: "Pegou com a mão direita?", points: 1 },
-      { id: "com_dobrou", label: "Dobrou ao meio?", points: 1 },
-      { id: "com_chao", label: "Colocou no chão?", points: 1 },
+      {
+        id: "com_direita",
+        label: "Pegou com a mão direita?",
+        points: 1,
+        dominio: "linguagem",
+      },
+      {
+        id: "com_dobrou",
+        label: "Dobrou ao meio?",
+        points: 1,
+        dominio: "linguagem",
+      },
+      {
+        id: "com_chao",
+        label: "Colocou no chão?",
+        points: 1,
+        dominio: "linguagem",
+      },
     ],
   },
 
@@ -125,7 +229,14 @@ export const meemSteps: TestStep[] = [
     instruction:
       'Mostre a frase "FECHE OS OLHOS" e diga: "Leia e faça o que está escrito"',
     hasTimer: true,
-    questions: [{ id: "lei_olhos", label: "Fechou os olhos?", points: 1 }],
+    questions: [
+      {
+        id: "lei_olhos",
+        label: "Fechou os olhos?",
+        points: 1,
+        dominio: "linguagem",
+      },
+    ],
   },
 
   // --- ETAPA 11/12 (Padrão MEEM) ---
@@ -139,6 +250,7 @@ export const meemSteps: TestStep[] = [
         id: "esc_frase",
         label: "Escreveu frase com sujeito e verbo?",
         points: 1,
+        dominio: "linguagem",
       },
     ],
   },
@@ -154,6 +266,7 @@ export const meemSteps: TestStep[] = [
         id: "des_pentagonos",
         label: "Copiou os pentágonos corretamente (10 ângulos e interseção)?",
         points: 1,
+        dominio: "visuoespacial",
       },
     ],
   },
