@@ -123,6 +123,7 @@ export const initDB = async () => {
           score_memoria_imediata REAL NOT NULL,
           score_total REAL NOT NULL,
           classificacao TEXT NOT NULL,
+          score_orientacao_temporal REAL NOT NULL,
           FOREIGN KEY (id_paciente) REFERENCES paciente(id),
           FOREIGN KEY (id_profissional) REFERENCES profissional(id),
           FOREIGN KEY (id_instrumento) REFERENCES instrumento_avaliacao(id),
