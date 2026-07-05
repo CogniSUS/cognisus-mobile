@@ -41,7 +41,7 @@ export default function SelecaoUnidade() {
     );
 
     router.push({
-      pathname: "/",
+      pathname: "/tests/execute",
       params: {
         unidadeId: String(unidadeSaude),
         patientId: params.patientId,
