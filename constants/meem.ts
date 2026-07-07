@@ -40,8 +40,8 @@ export const meemSteps: TestStep[] = [
         dominio: "orientacao_temporal",
       },
       {
-        id: "ot_estacao",
-        label: "Em que estação do ano estamos?",
+        id: "ot_horario",
+        label: "Em que horário do dia estamos?",
         points: 1,
         dominio: "orientacao_temporal",
       },
