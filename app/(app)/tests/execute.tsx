@@ -1,9 +1,9 @@
 import { QuestionCard } from "@/components/ui/question-card";
 import { TestHeader } from "@/components/ui/test-header";
+import { TestInstruction } from "@/components/ui/test-instruction";
 import { meemSteps } from "@/constants/meem";
 import { getDB } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
-import { useAuth } from "@/providers/AuthProvider";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -17,8 +17,6 @@ import {
 } from "react-native";
 
 export default function ExecuteTest() {
-  const { user } = useAuth();
-
   const { info: showInfo } = useToast();
 
   const params = useLocalSearchParams<{
@@ -130,6 +128,10 @@ export default function ExecuteTest() {
       >
         <View style={styles.contentArea}>
           <Text style={styles.stepTitle}>{step.title}</Text>
+          <TestInstruction
+            instruction={step.instruction}
+            isIntro={step.isIntro}
+          />
 
           {/* 2. Mapeia e desenha as perguntas dinamicamente */}
           {step.questions?.map((pergunta) => (
