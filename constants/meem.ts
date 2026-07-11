@@ -163,6 +163,7 @@ export const meemSteps: TestStep[] = [
     title: "Nomeação",
     instruction: 'Mostre objetos e pergunte: "O que é isto?"',
     hasTimer: true,
+    amountOfTime: 30,
     questions: [
       {
         id: "nom_relogio",
@@ -229,6 +230,7 @@ export const meemSteps: TestStep[] = [
     instruction:
       'Mostre a frase "FECHE OS OLHOS" e diga: "Leia e faça o que está escrito"',
     hasTimer: true,
+    amountOfTime: 30,
     questions: [
       {
         id: "lei_olhos",
@@ -245,6 +247,8 @@ export const meemSteps: TestStep[] = [
     title: "Escrita",
     instruction:
       'Entregue um papel e caneta e peça: "Escreva uma frase completa e com sentido"',
+    hasTimer: true,
+    amountOfTime: 30,
     questions: [
       {
         id: "esc_frase",
