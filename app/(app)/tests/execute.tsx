@@ -1,6 +1,7 @@
 import { QuestionCard } from "@/components/ui/question-card";
 import { TestHeader } from "@/components/ui/test-header";
 import { TestInstruction } from "@/components/ui/test-instruction";
+import { TimerCard } from "@/components/ui/time-card";
 import { meemSteps } from "@/constants/meem";
 import { getDB } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
@@ -133,7 +134,10 @@ export default function ExecuteTest() {
             isIntro={step.isIntro}
           />
 
-          {/* 2. Mapeia e desenha as perguntas dinamicamente */}
+          {step.hasTimer && (
+            <TimerCard amountOfTime={step.amountOfTime || 60} />
+          )}
+
           {step.questions?.map((pergunta) => (
             <QuestionCard
               key={pergunta.id} // Obrigatório no React
