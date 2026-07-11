@@ -611,7 +611,13 @@ export default function HomePage() {
             <>
               <View style={styles.identityCard}>
                 <Text style={styles.identityTitle}>CONFIRMAÇÃO DE IDENTIDADE</Text>
-
+                <TouchableOpacity style={styles.editButton}
+                onPress={()=>router.push({
+                  pathname: "/(app)/tests/edicao_paciente",
+                  params: {id:pacienteEncontrado.id}
+                })}>
+                  
+                </TouchableOpacity>
                 <Text style={styles.identityText}>
                   <Text style={styles.identityLabel}>Nome:</Text>{" "}
                   {pacienteEncontrado.nome_completo}
@@ -1074,5 +1080,16 @@ const styles = StyleSheet.create({
 
   searchLoading: {
     marginTop: 16,
+  },
+  editButton: {
+    backgroundColor: "#732cad",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  editButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
   },
 });

@@ -1,44 +1,146 @@
+import { getDB } from "@/database/database";
 import { AntDesign, FontAwesome, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { Picker } from '@react-native-picker/picker';
-import { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-
 export default function editarPaciente(){
+  const {id} = useLocalSearchParams()
+  const pacienteId = Number(id);
+
   const [nome, setNome] = useState('')
   const [dataNascimento, setDataNascimento] = useState('')
   const [sexo, setSexo] = useState('')
-  const [escolaridade, setEscolaridade] = useState('')
-  const [dcnt, setDCNT] = useState('')
+  const [escolaridade, setEscolaridade] = useState<number | null>(null)
+  const [dcnt, setDCNT] = useState<number | null>(null)
   const [loading, setLoading] = useState(false);
+
+  const [listaEscolaridade, setListaEscolaridade] = useState<
+  {id:number ;tipo:string}[]
+  >([])
+
+  const [listaDCNT, setListaDCNT] = useState<
+  {id: number ;tipo:string}[]
+  >([])
+
+  async function carregarEscolaridade(){
+    const db = await getDB()
+    const dados = await db.getAllAsync<{
+      id:number;
+      tipo: string;
+    }>(
+      "SELECT * FROM escolaridade"
+    )
+
+
+    setListaEscolaridade(dados)
+  }
+
+  async function carregarDCNT(){
+    const db = await getDB()
+    const dados = await db.getAllAsync<{
+      id:number;
+      tipo: string
+    }>(
+      "SELECT * FROM dcnt"
+    )
+
+    
+    setListaDCNT(dados)
+  }
+
+  async function carregarPaciente(){
+    const db = await getDB()
+    const paciente = await db.getFirstAsync<{
+      nome_completo: string;
+      data_nascimento: string;
+      sexo: string;
+      escolaridade: number;
+    }>(`SELECT * FROM paciente WHERE id=?`,[pacienteId])
+
+    if(!paciente) return;
+
+    setNome(paciente.nome_completo);
+    const [ano, mes, dia] = paciente.data_nascimento.split("-");
+    setDataNascimento(`${dia}/${mes}/${ano}`);
+    setSexo(paciente.sexo);
+    setEscolaridade(paciente.escolaridade);
+  }
+
 
   async function getEditarPaciente() {
     try{
       setLoading(true)
-      if (!nome || !dataNascimento || sexo=="" || dcnt=="" || escolaridade=="") {
+      if (!nome || !dataNascimento || sexo=="" || escolaridade==null) {
         setLoading(false)
         return Alert.alert(
           "Erro",
           "Preencha os campos"
         )
-      
       }
+      const partesData = dataNascimento.split("/");
+
+          if (partesData.length !== 3) {
+            setLoading(false);
+            return showError("Data inválida");
+          }
+
+          const dia = partesData[0];
+          const mes = partesData[1];
+          const ano = partesData[2];
+
+          if (dia.length !== 2 || mes.length !== 2 || ano.length !== 4) {
+            setLoading(false);
+            return showError("Data inválida");
+          }
+
+          const dataFormatada = `${ano}-${mes}-${dia}`;
+
+          if (Number(dia) > 31 || Number(mes) > 12) {
+            setLoading(false);
+            return showError("Data inválida");
+          }
               
-      setTimeout(()=>{
-          Alert.alert("Sucesso", "Cadastro de paciente realizado!")
-          setLoading(false)
-          
+      const db = await getDB()
 
-        },3000)
-
+      await db.runAsync(
+        `UPDATE paciente
+        SET
+          nome_completo=?,
+          data_nascimento=?,
+          sexo= ?,
+          escolaridade=?
+        WHERE id=?`,
+        [
+        nome,
+        dataFormatada,
+        sexo,
+        escolaridade,
+        pacienteId
+        ]
+      )
+      Alert.alert("Sucesso", "Paciente atualizado com sucesso!");
+      router.back();
     }
     catch(error){
       console.log(error);
       Alert.alert("Erro", "Erro ao conectar ao servidor.");
+    } finally{
       setLoading(false);
     }
   
   }
+
+  useEffect(()=>{
+    async function carregarDados(){
+      await carregarEscolaridade()
+      await carregarDCNT()
+      await carregarPaciente()
+    }
+
+    carregarDados()
+  },[])
   
   
     return(
@@ -115,21 +217,18 @@ export default function editarPaciente(){
                       style={styles.picker}
                     >
 
-                      <Picker.Item label="Escolaridade" value="" />
+                      <Picker.Item label="Escolaridade" value={null} />
 
-                      <Picker.Item label="Ensino Fundamental Incompleto" value="ensinoFundamentalIncompleto" />
-
-                      <Picker.Item label="Ensino Fundamental Completo" value="ensinoFundamentalCompleto" />
-
-                      <Picker.Item label="Ensino Médio Incompleto" value="ensinoMedioIncompleto" />
-
-                      <Picker.Item label="Ensino Médio Completo" value="ensinoMedioCompleto" />
-
-                      <Picker.Item label="Ensino Superior Incompleto" value="ensinoSuperiorIncompleto" />
-
-                      <Picker.Item label="Ensino Superior Completo" value="ensinoSuperiorCompleto" />
-
-                      <Picker.Item label="Pós Graduação" value="posGraduacao" />
+                      
+                      {
+                        listaEscolaridade.map((item) => (
+                          <Picker.Item
+                            key={item.id}
+                            label={item.tipo}
+                            value={item.id}
+                            />
+                        ))
+                      }
 
                     </Picker>
                     <Ionicons style={styles.icons} name="school" size={24} />
@@ -143,9 +242,17 @@ export default function editarPaciente(){
                     style={styles.picker}
                   >
 
-                    <Picker.Item label="DCNT deferida (s)" value="" />
+                    <Picker.Item label="DCNT deferida (opcional)" value={null} />
 
-                    <Picker.Item label="A definir" value="aDefinir" />
+                    {
+                      listaDCNT.map((item) => (
+                        <Picker.Item
+                          key={item.id}
+                          label={item.tipo}
+                          value={item.id}
+                        />
+                      ))
+                    }
 
 
                   </Picker>
@@ -276,3 +383,7 @@ export default function editarPaciente(){
     flex: 1,
 }
 });
+
+function showError(arg0: string) {
+  throw new Error("Function not implemented.");
+}
