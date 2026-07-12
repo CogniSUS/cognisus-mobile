@@ -610,14 +610,19 @@ export default function HomePage() {
           {pacienteEncontrado && (
             <>
               <View style={styles.identityCard}>
-                <Text style={styles.identityTitle}>CONFIRMAÇÃO DE IDENTIDADE</Text>
+                <View style={styles.header}>
+                  <Text style={styles.identityTitle}>CONFIRMAÇÃO DE IDENTIDADE</Text>
                 <TouchableOpacity style={styles.editButton}
                 onPress={()=>router.push({
                   pathname: "/(app)/tests/edicao_paciente",
                   params: {id:pacienteEncontrado.id}
                 })}>
+                  <FontAwesome name="pencil" size={24} color="#ffffff" />
                   
                 </TouchableOpacity>
+                </View>
+              
+    
                 <Text style={styles.identityText}>
                   <Text style={styles.identityLabel}>Nome:</Text>{" "}
                   {pacienteEncontrado.nome_completo}
@@ -1081,11 +1086,18 @@ const styles = StyleSheet.create({
   searchLoading: {
     marginTop: 16,
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   editButton: {
-    backgroundColor: "#732cad",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: "#c41616",
+    width: 50,
+    height: 50,
     borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   editButtonText: {
     color: "#fff",
