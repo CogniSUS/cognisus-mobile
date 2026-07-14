@@ -5,11 +5,13 @@ import { TimerCard } from "@/components/ui/time-card";
 import { meemSteps } from "@/constants/meem";
 import { getDB } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/providers/AuthProvider";
 import { Feather } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,7 +20,9 @@ import {
 } from "react-native";
 
 export default function ExecuteTest() {
-  const { info: showInfo } = useToast();
+  const { user } = useAuth();
+  const router = useRouter();
+  const { info: showInfo, success: showSuccess } = useToast();
 
   const params = useLocalSearchParams<{
     patientId: string;
@@ -30,8 +34,11 @@ export default function ExecuteTest() {
   const [answers, setAnswers] = useState<Record<string, number>>({});
 
   const [patientName, setPatientName] = useState("");
+  const [patientEscolaridade, setPatientEscolaridade] = useState("");
   const [instrumentName, setInstrumentName] = useState("");
   const [loadingDados, setLoadingDados] = useState(true);
+
+  const [dataInicio] = useState(() => new Date().toISOString());
 
   const step = meemSteps[currentStep];
 
@@ -41,8 +48,15 @@ export default function ExecuteTest() {
         setLoadingDados(true);
         const db = await getDB();
 
-        const paciente = await db.getFirstAsync<{ nome_completo: string }>(
-          "SELECT nome_completo FROM paciente WHERE id = ? LIMIT 1",
+        // 1. Buscamos nome_completo e escolaridade da tabela paciente
+        const paciente = await db.getFirstAsync<{
+          nome_completo: string;
+          escolaridade: string;
+        }>(
+          `SELECT p.nome_completo, e.tipo as escolaridade 
+          FROM paciente p
+          LEFT JOIN escolaridade e ON p.escolaridade = e.id 
+          WHERE p.id = ? LIMIT 1`,
           [Number(params.patientId)],
         );
 
@@ -51,7 +65,10 @@ export default function ExecuteTest() {
           [Number(params.instrumentId)],
         );
 
-        if (paciente) setPatientName(paciente.nome_completo);
+        if (paciente) {
+          setPatientName(paciente.nome_completo);
+          setPatientEscolaridade(paciente.escolaridade || "Analfabeto");
+        }
         if (instrumento) setInstrumentName(instrumento.nome);
       } catch (error) {
         console.error("Erro ao buscar dados do teste no SQLite:", error);
@@ -97,8 +114,134 @@ export default function ExecuteTest() {
     if (currentStep > 0) setCurrentStep((prev) => prev - 1);
   };
 
-  const finalizar = () => {
-    console.log("Test finished. Answers:", answers);
+  const obterClassificacao = (
+    scoreTotal: number,
+    escolaridade: string,
+  ): string => {
+    const esc = escolaridade.toLowerCase().trim();
+    let notaCorte = 20; // Default (analfabeto)
+
+    switch (esc) {
+      case "analfabeto":
+        notaCorte = 20;
+        break;
+      case "ensino fundamental incompleto":
+        notaCorte = 25;
+        break;
+      case "ensino fundamental completo":
+        notaCorte = 26.5;
+        break;
+      case "ensino médio":
+        notaCorte = 28;
+        break;
+      case "ensino superior":
+        notaCorte = 29;
+        break;
+      default:
+        notaCorte = 20;
+    }
+
+    return scoreTotal >= notaCorte ? "Normal" : "Possível Déficit Cognitivo";
+  };
+
+  const finalizar = async () => {
+    try {
+      setLoadingDados(true);
+
+      const db = await getDB();
+
+      // 1. Inicializamos os scores por domínios
+      const scores = {
+        orientacao_temporal: 0,
+        orientacao_espacial: 0,
+        memoria_imediata: 0,
+        atencao: 0,
+        memoria_recente: 0,
+        linguagem: 0,
+        visuoespacial: 0,
+        total: 0,
+      };
+
+      // 2. Extraímos todas as perguntas mapeadas no meemSteps
+      const todasAsPerguntas = meemSteps.flatMap((s) => s.questions || []);
+
+      // 3. Calculamos as pontuações correspondentes a cada domínio
+      Object.entries(answers).forEach(([perguntaId, pontuacao]) => {
+        const pergunta = todasAsPerguntas.find((p) => p.id === perguntaId);
+        if (pergunta) {
+          const dominio = pergunta.dominio as keyof typeof scores;
+          scores[dominio] += pontuacao;
+          scores.total += pontuacao;
+        }
+      });
+
+      // 4. Obtemos a classificação com base na escolaridade gravada
+      const classificacaoFinal = obterClassificacao(
+        scores.total,
+        patientEscolaridade,
+      );
+      const agora = new Date().toISOString();
+
+      // 5. Executamos o INSERT com todas as colunas exigidas pelo seu banco local
+      await db.runAsync(
+        `INSERT INTO avaliacao_teste_meem (
+          created_at,
+          update_at,
+          deleted_at,
+          sync_status,
+          sync_error,
+          id_paciente,
+          id_profissional,
+          id_instrumento,
+          unidade_saude,
+          data_inicio,
+          data_fim,
+          score_orientacao_espacial,
+          score_atencao,
+          score_linguagem,
+          score_visuoespacial,
+          score_memoria_recente,
+          score_memoria_imediata,
+          score_total,
+          classificacao,
+          score_orientacao_temporal
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          agora, // created_at
+          null, // update_at
+          null, // deleted_at
+          "pending", // sync_status
+          null, // sync_error
+          Number(params.patientId), // id_paciente
+          user!.id, // id_profissional
+          Number(params.instrumentId), // id_instrumento
+          Number(params.unidadeId), // unidade_saude
+          dataInicio, // data_inicio
+          agora, // data_fim
+          scores.orientacao_espacial, // score_orientacao_espacial
+          scores.atencao, // score_atencao
+          scores.linguagem, // score_linguagem
+          scores.visuoespacial, // score_visuoespacial
+          scores.memoria_recente, // score_memoria_recente
+          scores.memoria_imediata, // score_memoria_imediata
+          scores.total, // score_total
+          classificacaoFinal, // classificacao
+          scores.orientacao_temporal, // score_orientacao_temporal
+        ],
+      );
+
+      // 6. Alerta de sucesso e redirecionamento de tela
+      showSuccess("Teste finalizado e salvo com sucesso!");
+      router.replace("/"); // Redireciona de volta para a Home limpando a pilha
+    } catch (error) {
+      console.error("Erro ao persistir avaliação no SQLite:", error);
+      Alert.alert(
+        "Erro",
+        "Não foi possível salvar o resultado do teste localmente.",
+      );
+    } finally {
+      setLoadingDados(false);
+    }
   };
 
   if (loadingDados) {
@@ -140,10 +283,10 @@ export default function ExecuteTest() {
 
           {step.questions?.map((pergunta) => (
             <QuestionCard
-              key={pergunta.id} // Obrigatório no React
-              question={pergunta} // Passa os dados da pergunta
-              currentValue={answers[pergunta.id]} // Passa o valor se já estiver respondida
-              onAnswer={handleAnswer} // Passa a nossa função de salvar
+              key={pergunta.id}
+              question={pergunta}
+              currentValue={answers[pergunta.id]}
+              onAnswer={handleAnswer}
             />
           ))}
         </View>
