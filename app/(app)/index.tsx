@@ -8,9 +8,10 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -383,6 +384,14 @@ export default function HomePage() {
     carregarDados();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      setCpfBusca("");
+      setPacienteEncontrado(null);
+      setPacienteNaoEncontrado(false);
+    }, []),
+  );
+
   useEffect(() => {
     const cpfNumeros = cpfBusca.replace(/\D/g, "");
 
@@ -589,7 +598,8 @@ export default function HomePage() {
           <View style={styles.searchBox}>
             <Ionicons name="search-outline" size={20} color="#94A3B8" />
             <TextInput
-              placeholder="123.456.789-00"
+              placeholder="Digite o CPF do paciente"
+              placeholderTextColor="#9CA3AF"
               keyboardType="numeric"
               style={styles.searchInput}
               value={cpfBusca}
@@ -671,7 +681,12 @@ export default function HomePage() {
             <View style={styles.notFoundCard}>
               <Text style={styles.notFoundText}>Paciente não encontrado</Text>
 
-              <Pressable onPress={() => setMostrarCadastro(true)}>
+              <Pressable
+                onPress={() => {
+                  limparBuscaPaciente();
+                  setMostrarCadastro(true);
+                }}
+              >
                 <LinearGradient
                   colors={["#B12CF7", "#9D22F0", "#8A18E8"]}
                   start={{ x: 0, y: 0 }}
