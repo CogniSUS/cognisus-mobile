@@ -611,18 +611,22 @@ export default function HomePage() {
             <>
               <View style={styles.identityCard}>
                 <View style={styles.header}>
-                  <Text style={styles.identityTitle}>CONFIRMAÇÃO DE IDENTIDADE</Text>
-                <TouchableOpacity style={styles.editButton}
-                onPress={()=>router.push({
-                  pathname: "/(app)/tests/edicao_paciente",
-                  params: {id:pacienteEncontrado.id}
-                })}>
-                  <FontAwesome name="pencil" size={24} color="#ffffff" />
-                  
-                </TouchableOpacity>
+                  <Text style={styles.identityTitle}>
+                    CONFIRMAÇÃO DE IDENTIDADE
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(app)/patients/edicao_paciente",
+                        params: { id: pacienteEncontrado.id },
+                      })
+                    }
+                  >
+                    <FontAwesome name="pencil" size={24} color="#ffffff" />
+                  </TouchableOpacity>
                 </View>
-              
-    
+
                 <Text style={styles.identityText}>
                   <Text style={styles.identityLabel}>Nome:</Text>{" "}
                   {pacienteEncontrado.nome_completo}
@@ -767,7 +771,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 32,
-    },
+  },
   boxTop: {
     height: Dimensions.get("window").height / 5.3,
     width: "100%",
@@ -1001,6 +1005,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#1F2A44",
     marginBottom: 12,
+    flex: 1,
+    flexWrap: "wrap",
   },
 
   identityText: {
