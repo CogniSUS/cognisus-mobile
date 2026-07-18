@@ -112,7 +112,7 @@ export const initDB = async () => {
           sync_status TEXT NOT NULL,
           sync_error TEXT,
           id_paciente INTEGER NOT NULL,
-          id_profissional INTEGER NOT NULL,
+          id_profissional TEXT NOT NULL,
           id_instrumento INTEGER NOT NULL,
           unidade_saude INTEGER NOT NULL,
           data_inicio TEXT NOT NULL,
