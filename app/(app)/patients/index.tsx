@@ -160,8 +160,12 @@ export default function PatientsPage() {
   }, [patients, search]);
 
   function handleAddPatient() {
-    // Lembrar de trocar essa rota para a de cadastro de paciente quando estiver pronta. Por enquanto, redireciona para a home.
-    router.push("/");
+    router.push({
+      pathname: "/",
+      params: {
+        abrirCadastro: "true",
+      },
+    });
   }
 
   function handlePatientPress(patient: PatientListItem) {

@@ -10,7 +10,7 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -40,6 +40,21 @@ type PacienteBusca = {
 
 export default function HomePage() {
   const { user } = useAuth();
+  const params = useLocalSearchParams<{
+    abrirCadastro?: string;
+  }>();
+
+  useEffect(() => {
+    if (params.abrirCadastro === "true") {
+      limparBuscaPaciente();
+      limparCampos();
+      setMostrarCadastro(true);
+
+      router.setParams({
+        abrirCadastro: undefined,
+      });
+    }
+  }, [params.abrirCadastro]);
 
   const [mostrarCadastro, setMostrarCadastro] = useState(false);
   const [nome, setNome] = useState("");
