@@ -1,17 +1,17 @@
 import { calculateAge, Patient } from "@/types/patient";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
+export type PatientListItem = Patient & {
+  ultima_avaliacao: string | null;
+  ultima_unidade: string | null;
+};
 
 interface PatientListCardProps {
-  patient: Patient;
-  onEdit: (patient: Patient) => void;
-  onDelete: (patient: Patient) => void;
-  onPress?: (patient: Patient) => void;
+  patient: PatientListItem;
+  onEdit: (patient: PatientListItem) => void;
+  onDelete: (patient: PatientListItem) => void;
+  onPress?: (patient: PatientListItem) => void;
 }
 
 function formatCpf(cpf: string) {
@@ -37,6 +37,25 @@ function formatSex(sex: Patient["sexo"]) {
   return labels[sex];
 }
 
+function formatDate(date: string | null) {
+  if (!date) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [year, month, day] = date.split("-");
+    return `${day}/${month}/${year}`;
+  }
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  return parsedDate.toLocaleDateString("pt-BR");
+}
+
 export function PatientListCard({
   patient,
   onEdit,
@@ -44,6 +63,10 @@ export function PatientListCard({
   onPress,
 }: PatientListCardProps) {
   const age = calculateAge(patient.data_nascimento);
+  const lastEvaluationDate = formatDate(patient.ultima_avaliacao);
+  const hasEvaluation = Boolean(
+    patient.ultima_unidade || lastEvaluationDate,
+  );
 
   return (
     <Pressable
@@ -63,13 +86,27 @@ export function PatientListCard({
           {patient.nome_completo}
         </Text>
 
-        <Text style={styles.cpf}>
-          CPF: {formatCpf(patient.cpf)}
-        </Text>
+        <Text style={styles.cpf}>CPF: {formatCpf(patient.cpf)}</Text>
 
         <Text style={styles.details}>
           {age} anos • {formatSex(patient.sexo)}
         </Text>
+
+        {hasEvaluation && (
+          <View style={styles.evaluationInfo}>
+            {patient.ultima_unidade && (
+              <Text style={styles.secondaryInfo} numberOfLines={1}>
+                {patient.ultima_unidade}
+              </Text>
+            )}
+
+            {lastEvaluationDate && (
+              <Text style={styles.secondaryInfo}>
+                Último teste: {lastEvaluationDate}
+              </Text>
+            )}
+          </View>
+        )}
       </View>
 
       <View style={styles.actions}>
@@ -111,7 +148,7 @@ export function PatientListCard({
 
 const styles = StyleSheet.create({
   container: {
-    minHeight: 136,
+    minHeight: 150,
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
     paddingVertical: 18,
@@ -170,8 +207,20 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
+  evaluationInfo: {
+    marginTop: 9,
+    gap: 2,
+  },
+
+  secondaryInfo: {
+    color: "#94A3B8",
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 18,
+  },
+
   actions: {
-    minHeight: 92,
+    minHeight: 106,
     justifyContent: "space-between",
     alignItems: "center",
     marginLeft: 4,

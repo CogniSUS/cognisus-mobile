@@ -1,4 +1,7 @@
-import { PatientListCard } from "@/components/features/patients/patient-list-card";
+import {
+  PatientListCard,
+  PatientListItem,
+} from "@/components/features/patients/patient-list-card";
 import { getDB } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
 import { Patient } from "@/types/patient";
@@ -29,6 +32,8 @@ type PatientRow = {
   data_nascimento: string;
   sexo: string;
   escolaridade: number | null;
+  ultima_avaliacao: string | null;
+  ultima_unidade: string | null;
 };
 
 function normalizeSex(value: string): Patient["sexo"] {
@@ -45,7 +50,7 @@ function normalizeSex(value: string): Patient["sexo"] {
   return "outro";
 }
 
-function mapRowToPatient(row: PatientRow): Patient {
+function mapRowToPatient(row: PatientRow): PatientListItem {
   return {
     id: row.id,
     nome_completo: row.nome_completo,
@@ -53,13 +58,15 @@ function mapRowToPatient(row: PatientRow): Patient {
     data_nascimento: row.data_nascimento,
     sexo: normalizeSex(row.sexo),
     escolaridade: row.escolaridade ?? undefined,
+    ultima_avaliacao: row.ultima_avaliacao,
+    ultima_unidade: row.ultima_unidade,
   };
 }
 
 export default function PatientsPage() {
   const { success: showSuccess, error: showError } = useToast();
 
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [patients, setPatients] = useState<PatientListItem[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -75,15 +82,41 @@ export default function PatientsPage() {
       const rows = await db.getAllAsync<PatientRow>(
         `
           SELECT
-            id,
-            nome_completo,
-            cpf,
-            data_nascimento,
-            sexo,
-            escolaridade
-          FROM paciente
-          WHERE deleted_at IS NULL
-          ORDER BY nome_completo COLLATE NOCASE ASC
+            p.id,
+            p.nome_completo,
+            p.cpf,
+            p.data_nascimento,
+            p.sexo,
+            p.escolaridade,
+
+            (
+              SELECT COALESCE(a.data_fim, a.data_inicio, a.created_at)
+              FROM avaliacao_teste_meem a
+              WHERE a.id_paciente = p.id
+                AND a.deleted_at IS NULL
+              ORDER BY datetime(
+                COALESCE(a.data_fim, a.data_inicio, a.created_at)
+              ) DESC
+              LIMIT 1
+            ) AS ultima_avaliacao,
+
+            (
+              SELECT u.nome
+              FROM avaliacao_teste_meem a
+              INNER JOIN unidade_saude u
+                ON u.id = a.unidade_saude
+              WHERE a.id_paciente = p.id
+                AND a.deleted_at IS NULL
+                AND u.deleted_at IS NULL
+              ORDER BY datetime(
+                COALESCE(a.data_fim, a.data_inicio, a.created_at)
+              ) DESC
+              LIMIT 1
+            ) AS ultima_unidade
+
+          FROM paciente p
+          WHERE p.deleted_at IS NULL
+          ORDER BY p.nome_completo COLLATE NOCASE ASC
         `,
       );
 
@@ -131,7 +164,7 @@ export default function PatientsPage() {
     router.push("/");
   }
 
-  function handlePatientPress(patient: Patient) {
+  function handlePatientPress(patient: PatientListItem) {
     router.push({
       pathname: "/patients/[id]",
       params: {
@@ -140,7 +173,7 @@ export default function PatientsPage() {
     });
   }
 
-  function handleEditPatient(patient: Patient) {
+  function handleEditPatient(patient: PatientListItem) {
     router.push({
       pathname: "/patients/edicao_paciente",
       params: {
@@ -149,7 +182,7 @@ export default function PatientsPage() {
     });
   }
 
-  function handleDeletePatient(patient: Patient) {
+  function handleDeletePatient(patient: PatientListItem) {
     Alert.alert(
       "Excluir paciente",
       `Deseja realmente excluir ${patient.nome_completo}?`,
@@ -167,7 +200,7 @@ export default function PatientsPage() {
     );
   }
 
-  async function deletePatient(patient: Patient) {
+  async function deletePatient(patient: PatientListItem) {
     try {
       const db = await getDB();
       const now = new Date().toISOString();
