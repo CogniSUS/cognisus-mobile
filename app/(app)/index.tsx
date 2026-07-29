@@ -1,4 +1,6 @@
-import { getDB } from "@/database/database";
+import { DcntRepository } from "@/database/repositories/DcntRepository";
+import { EscolaridadeRepository } from "@/database/repositories/EscolaridadeRepository";
+import { PacienteRepository } from "@/database/repositories/PacienteRepository";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/providers/AuthProvider";
 import { calcularIdade, formatarDataBR } from "@/utils/dateHelpers";
@@ -115,28 +117,6 @@ export default function HomePage() {
     });
   }
 
-  async function carregarEscolaridades() {
-    const db = await getDB();
-
-    const dados = await db.getAllAsync<{
-      id: number;
-      tipo: string;
-    }>("SELECT * FROM escolaridade");
-
-    setListaEscolaridade(dados);
-  }
-
-  async function carregarDCNT() {
-    const db = await getDB();
-
-    const dados = await db.getAllAsync<{
-      id: number;
-      tipo: string;
-    }>("SELECT * FROM dcnt");
-
-    setListaDCNT(dados);
-  }
-
   async function buscarPacientePorCpf() {
     try {
       setBuscandoPaciente(true);
@@ -153,40 +133,12 @@ export default function HomePage() {
         return;
       }
 
-      const db = await getDB();
-
-      const paciente = await db.getFirstAsync<PacienteBusca>(
-        `
-        SELECT
-          p.id,
-          p.nome_completo,
-          p.cpf,
-          p.data_nascimento,
-          p.sexo,
-          e.tipo AS escolaridade_nome,
-          (
-            SELECT COALESCE(a.data_fim, a.data_inicio, a.created_at)
-            FROM avaliacao_teste_meem a
-            WHERE a.id_paciente = p.id
-              AND a.deleted_at IS NULL
-            ORDER BY datetime(COALESCE(a.data_fim, a.data_inicio, a.created_at)) DESC
-            LIMIT 1
-          ) AS ultima_avaliacao
-        FROM paciente p
-        LEFT JOIN escolaridade e ON e.id = p.escolaridade
-        WHERE p.cpf = ?
-          AND p.deleted_at IS NULL
-        LIMIT 1
-        `,
-        [cpfNumeros],
-      );
-
+      const paciente = await PacienteRepository.buscarPorCpf(cpfNumeros);
       if (!paciente) {
         setPacienteNaoEncontrado(true);
-        return;
+      } else {
+        setPacienteEncontrado(paciente);
       }
-
-      setPacienteEncontrado(paciente);
     } catch (error) {
       console.log(error);
       showError("Erro ao buscar paciente.");
@@ -239,64 +191,21 @@ export default function HomePage() {
       }
 
       try {
-        const db = await getDB();
-
-        const pacienteExistente = await db.getFirstAsync<{ id: number }>(
-          "SELECT id FROM paciente WHERE cpf = ? LIMIT 1",
-          [cpfNumeros],
-        );
+        const pacienteExistente =
+          await PacienteRepository.verificarCpfExistente(cpfNumeros);
 
         if (pacienteExistente) {
           setLoading(false);
           return showError("Este CPF já está cadastrado no sistema.");
         }
 
-        await db.withTransactionAsync(async () => {
-          const resultado = await db.runAsync(
-            `INSERT INTO paciente (created_at, sync_status, nome_completo, cpf, data_nascimento, sexo, escolaridade)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [
-              new Date().toISOString(),
-              "pending",
-              nome,
-              cpfNumeros,
-              dataFormatada,
-              sexo,
-              escolaridade,
-            ],
-          );
-
-          const pacienteId = resultado.lastInsertRowId;
-
-          for (const dcntId of dcntsSelecionadas) {
-            await db.runAsync(
-              `INSERT INTO paciente_dcnt (created_at, sync_status, id_paciente, id_dcnt)
-               VALUES (?, ?, ?, ?)`,
-              [new Date().toISOString(), "pending", pacienteId, dcntId],
-            );
-          }
-
-          const pacientePersistido = await db.getAllAsync<{
-            id: number;
-            nome_completo: string;
-            cpf: string;
-            data_nascimento: string;
-            sexo: string;
-            escolaridade: number;
-          }>(`SELECT * FROM paciente WHERE id = ?`, [pacienteId]);
-
-          console.log("Paciente recuperado do banco local", pacientePersistido);
-
-          const pacienteDcntPersistido = await db.getAllAsync<{
-            id: number;
-            id_paciente: number;
-            id_dcnt: number;
-          }>(`SELECT * FROM paciente_dcnt WHERE id_paciente = ?`, [pacienteId]);
-
-          console.log(
-            "Paciente_DCNT recuperado do banco local",
-            pacienteDcntPersistido,
-          );
+        await PacienteRepository.criarComTransacao({
+          nome: nome,
+          cpf: cpfNumeros,
+          dataNascimento: dataFormatada,
+          sexo: sexo,
+          escolaridade: String(escolaridade), // Cast para garantir compatibilidade com o DTO
+          dcntsIds: dcntsSelecionadas,
         });
 
         showSuccess("Paciente cadastrado com sucesso!");
@@ -337,8 +246,11 @@ export default function HomePage() {
 
   useEffect(() => {
     async function carregarDados() {
-      await carregarEscolaridades();
-      await carregarDCNT();
+      const escolaridades = await EscolaridadeRepository.listarTodos();
+      const dcnts = await DcntRepository.listarTodos();
+
+      setListaEscolaridade(escolaridades);
+      setListaDCNT(dcnts);
     }
 
     carregarDados();
