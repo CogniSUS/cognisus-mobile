@@ -1,6 +1,6 @@
-import { DcntRepository } from "@/database/repositories/DcntRepository";
-import { EscolaridadeRepository } from "@/database/repositories/EscolaridadeRepository";
-import { PacienteRepository } from "@/database/repositories/PacienteRepository";
+import { useBuscaPaciente } from "@/hooks/useBuscaPaciente";
+import { useCadastroPaciente } from "@/hooks/useCadastroPaciente";
+import { useDominios } from "@/hooks/useDominios";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/providers/AuthProvider";
 import { calcularIdade, formatarDataBR } from "@/utils/dateHelpers";
@@ -12,10 +12,9 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
-import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -32,18 +31,43 @@ import {
   View,
 } from "react-native";
 
-type PacienteBusca = {
-  id: number;
-  nome_completo: string;
-  cpf: string;
-  data_nascimento: string;
-  sexo: "masculino" | "feminino" | "outro";
-  escolaridade_nome: string | null;
-  ultima_avaliacao: string | null;
-};
-
 export default function HomePage() {
   const { user } = useAuth();
+
+  const {
+    cpfBusca,
+    setCpfBusca,
+    buscandoPaciente,
+    pacienteEncontrado,
+    pacienteNaoEncontrado,
+    limparBuscaPaciente,
+  } = useBuscaPaciente();
+
+  const [mostrarCadastro, setMostrarCadastro] = useState(false);
+
+  const {
+    nome,
+    setNome,
+    cpf,
+    setCpf,
+    dataNascimento,
+    setDataNascimento,
+    sexo,
+    setSexo,
+    escolaridade,
+    setEscolaridade,
+    dcntsSelecionadas,
+    loading,
+    limparCampos,
+    toggleDcnt,
+    cadastrarPaciente,
+  } = useCadastroPaciente((cpfCadastrado) => {
+    setMostrarCadastro(false);
+    setCpfBusca(cpfCadastrado);
+  });
+
+  const { listaEscolaridade, listaDCNT } = useDominios();
+
   const params = useLocalSearchParams<{
     abrirCadastro?: string;
   }>();
@@ -60,170 +84,13 @@ export default function HomePage() {
     }
   }, [params.abrirCadastro]);
 
-  const [mostrarCadastro, setMostrarCadastro] = useState(false);
-  const [nome, setNome] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [dataNascimento, setDataNascimento] = useState("");
-  const [sexo, setSexo] = useState("");
-  const [escolaridade, setEscolaridade] = useState("");
-
-  const [loading, setLoading] = useState(false);
-
-  const [dcntsSelecionadas, setDcntsSelecionadas] = useState<number[]>([]);
   const [modalDcntVisivel, setModalDcntVisivel] = useState(false);
 
-  const [listaEscolaridade, setListaEscolaridade] = useState<
-    { id: number; tipo: string }[]
-  >([]);
-  const [listaDCNT, setListaDCNT] = useState<{ id: number; tipo: string }[]>(
-    [],
-  );
-
-  const [cpfBusca, setCpfBusca] = useState("");
-  const [buscandoPaciente, setBuscandoPaciente] = useState(false);
-  const [pacienteEncontrado, setPacienteEncontrado] =
-    useState<PacienteBusca | null>(null);
-  const [pacienteNaoEncontrado, setPacienteNaoEncontrado] = useState(false);
-
-  const { success: showSuccess, error: showError, info: showInfo } = useToast();
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { info: showInfo } = useToast();
 
   const nomeProfissional = useMemo(() => {
     return user?.user_metadata?.nome_completo || user?.email || "Profissional";
   }, [user]);
-
-  function limparCampos() {
-    setNome("");
-    setCpf("");
-    setDataNascimento("");
-    setSexo("");
-    setEscolaridade("");
-    setDcntsSelecionadas([]);
-  }
-
-  function limparBuscaPaciente() {
-    setCpfBusca("");
-    setPacienteEncontrado(null);
-    setPacienteNaoEncontrado(false);
-  }
-
-  function toggleDcnt(id: number) {
-    setDcntsSelecionadas((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((item) => item !== id);
-      }
-      return [...prev, id];
-    });
-  }
-
-  async function buscarPacientePorCpf() {
-    try {
-      setBuscandoPaciente(true);
-      setPacienteEncontrado(null);
-      setPacienteNaoEncontrado(false);
-
-      const cpfNumeros = cpfBusca.replace(/\D/g, "");
-
-      if (!cpfNumeros) {
-        return;
-      }
-
-      if (cpfNumeros.length !== 11) {
-        return;
-      }
-
-      const paciente = await PacienteRepository.buscarPorCpf(cpfNumeros);
-      if (!paciente) {
-        setPacienteNaoEncontrado(true);
-      } else {
-        setPacienteEncontrado(paciente);
-      }
-    } catch (error) {
-      console.log(error);
-      showError("Erro ao buscar paciente.");
-    } finally {
-      setBuscandoPaciente(false);
-    }
-  }
-
-  async function cadastrarPaciente() {
-    try {
-      setLoading(true);
-
-      const cpfNumeros = cpf.replace(/\D/g, "");
-
-      if (
-        !nome ||
-        !cpfNumeros ||
-        !dataNascimento ||
-        sexo === "" ||
-        escolaridade === ""
-      ) {
-        setLoading(false);
-        return showInfo("Preencha os campos");
-      } else if (cpfNumeros.length !== 11) {
-        setLoading(false);
-        return showError("CPF deve conter exatamente 11 dígitos");
-      }
-
-      const partesData = dataNascimento.split("/");
-
-      if (partesData.length !== 3) {
-        setLoading(false);
-        return showError("Data inválida");
-      }
-
-      const dia = partesData[0];
-      const mes = partesData[1];
-      const ano = partesData[2];
-
-      if (dia.length !== 2 || mes.length !== 2 || ano.length !== 4) {
-        setLoading(false);
-        return showError("Data inválida");
-      }
-
-      const dataFormatada = `${ano}-${mes}-${dia}`;
-
-      if (Number(dia) > 31 || Number(mes) > 12) {
-        setLoading(false);
-        return showError("Data inválida");
-      }
-
-      try {
-        const pacienteExistente =
-          await PacienteRepository.verificarCpfExistente(cpfNumeros);
-
-        if (pacienteExistente) {
-          setLoading(false);
-          return showError("Este CPF já está cadastrado no sistema.");
-        }
-
-        await PacienteRepository.criarComTransacao({
-          nome: nome,
-          cpf: cpfNumeros,
-          dataNascimento: dataFormatada,
-          sexo: sexo,
-          escolaridade: String(escolaridade), // Cast para garantir compatibilidade com o DTO
-          dcntsIds: dcntsSelecionadas,
-        });
-
-        showSuccess("Paciente cadastrado com sucesso!");
-        limparCampos();
-        setMostrarCadastro(false);
-        setCpfBusca(cpf);
-        setLoading(false);
-      } catch (dbError) {
-        console.log("Erro SQLite:", dbError);
-        showError("Erro interno ao salvar dados.");
-        setLoading(false);
-      }
-    } catch (err) {
-      console.log(err);
-      showError("Erro ao conectar ao servidor.");
-      setLoading(false);
-    }
-  }
 
   function iniciarRastreio() {
     if (!pacienteEncontrado) {
@@ -243,56 +110,6 @@ export default function HomePage() {
       },
     });
   }
-
-  useEffect(() => {
-    async function carregarDados() {
-      const escolaridades = await EscolaridadeRepository.listarTodos();
-      const dcnts = await DcntRepository.listarTodos();
-
-      setListaEscolaridade(escolaridades);
-      setListaDCNT(dcnts);
-    }
-
-    carregarDados();
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      setCpfBusca("");
-      setPacienteEncontrado(null);
-      setPacienteNaoEncontrado(false);
-    }, []),
-  );
-
-  useEffect(() => {
-    const cpfNumeros = cpfBusca.replace(/\D/g, "");
-
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    if (!cpfNumeros) {
-      setPacienteEncontrado(null);
-      setPacienteNaoEncontrado(false);
-      return;
-    }
-
-    if (cpfNumeros.length < 11) {
-      setPacienteEncontrado(null);
-      setPacienteNaoEncontrado(false);
-      return;
-    }
-
-    debounceRef.current = setTimeout(() => {
-      buscarPacientePorCpf();
-    }, 350);
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [cpfBusca]);
 
   return (
     <KeyboardAvoidingView
