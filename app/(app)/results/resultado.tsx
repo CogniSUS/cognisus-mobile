@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
@@ -26,7 +27,7 @@ export default function Results(){
               <TouchableOpacity style={styles.button}>
                 <Text style={styles.textButton}>Buscar Histórico</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.secundaryButton}>
+              <TouchableOpacity style={styles.secundaryButton} onPress={()=>router.back()}>
                 <Text style={styles.secundaryTextButton}>Voltar</Text>
               </TouchableOpacity>
             </View>
