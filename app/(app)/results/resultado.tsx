@@ -1,10 +1,44 @@
+import { getDB } from "@/database/database";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 export default function Results(){
     const [cpfBusca, setCpfBusca] = useState("");
+    const [loading, setLoading] = useState(false);
+    async function getBuscarHistorico(){
+      try {
+        setLoading(true)
+        const cpfLimpo = cpfBusca.replace(/\D/g, "")
+        if(cpfLimpo.length!==11){
+          return Alert.alert("Aviso", "CPF precisa ter 11 números")
+        }
+
+        const db = await getDB();
+        const paciente = await db.getFirstAsync<{
+          id: number
+          nome_completo: string
+          cpf: string
+        }>(
+          `SELECT id, nome_completo,cpf
+          FROM paciente
+          WHERE cpf =?`,
+          [cpfLimpo]
+        )
+        if(!paciente){
+          return Alert.alert("Paciente não encontrado");
+        }
+        //funcionalidade ainda não implementada
+        //é necessario a tela de histórico do paciente
+        router.push("/(app)/informations")
+      } catch (error) {
+        console.log(error)
+        Alert.alert("Ocorreu um erro ")
+      } finally{
+        setLoading(false)
+      }
+    }
     return(
         <View style={styles.container}>
             <View style={styles.boxTop}>
@@ -21,11 +55,27 @@ export default function Results(){
                   value={cpfBusca}
                   style={styles.input}
                   maxLength={14}
-                  onChangeText={setCpfBusca}
+                  onChangeText={
+                    (text) => { let cpf = text.replace(/\D/g, ""); 
+                    if (cpf.length > 3) {
+                       cpf = cpf.replace(/(\d{3})(\d)/, "$1.$2"); 
+                    } 
+                    if (cpf.length > 7) { 
+                      cpf = cpf.replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
+                    } 
+                    if (cpf.length > 11) { 
+                      cpf = cpf.replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+                    } 
+                    setCpfBusca(cpf); 
+                    }}
                 />
               </View>
-              <TouchableOpacity style={styles.button}>
-                <Text style={styles.textButton}>Buscar Histórico</Text>
+              <TouchableOpacity style={styles.button} onPress={getBuscarHistorico}>
+                {loading ?(
+                  <ActivityIndicator color={"white"} size={"small"} />
+                ):(
+                  <Text style={styles.textButton}>Buscar Histórico</Text>
+                )}
               </TouchableOpacity>
               <TouchableOpacity style={styles.secundaryButton} onPress={()=>router.back()}>
                 <Text style={styles.secundaryTextButton}>Voltar</Text>
@@ -42,7 +92,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   boxTop: {
-    height: Dimensions.get("window").height / 3,
+    height: Dimensions.get("window").height / 4,
     width: "100%",
     alignItems: "center",
     justifyContent: "flex-end"
@@ -51,7 +101,6 @@ const styles = StyleSheet.create({
     height: Dimensions.get("window").height / 3,
     width: "100%",
     alignItems: "center",
-    gap: 10,
   },
   title: {
     fontSize: 24,
@@ -60,7 +109,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   text: {
-    fontSize: 16,
+    fontSize: 12,
     color: "#64748B",
   },
   boxInput: {
@@ -114,3 +163,4 @@ const styles = StyleSheet.create({
   }
  
 });
+
