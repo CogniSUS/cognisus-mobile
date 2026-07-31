@@ -34,12 +34,10 @@ export default function HomePage() {
     limparBuscaPaciente,
   } = useBuscaPaciente();
 
-  // 2. Se houver o parâmetro de volta, preenchemos a busca e limpamos a URL
   useEffect(() => {
     if (params.cpfBuscaInicial) {
       setCpfBusca(formatCpf(params.cpfBuscaInicial));
 
-      // Limpa o parâmetro da URL para não causar bugs de re-renderização
       router.setParams({ cpfBuscaInicial: undefined });
     }
   }, [params.cpfBuscaInicial, setCpfBusca]);
@@ -52,7 +50,7 @@ export default function HomePage() {
     if (!pacienteEncontrado) return showInfo("Selecione um paciente válido.");
 
     router.push({
-      pathname: "/tests/selection",
+      pathname: "/tests/select",
       params: {
         patientId: String(pacienteEncontrado.id),
         nome: pacienteEncontrado.nome_completo,
@@ -129,7 +127,7 @@ export default function HomePage() {
                 style={styles.editButton}
                 onPress={() =>
                   router.push({
-                    pathname: "/(app)/patients/edicao_paciente",
+                    pathname: "/(app)/patients/edit",
                     params: { id: pacienteEncontrado.id },
                   })
                 }
@@ -199,7 +197,7 @@ export default function HomePage() {
           <Pressable
             onPress={() =>
               router.push({
-                pathname: "/(app)/patients/cadastro",
+                pathname: "/(app)/patients/create",
                 params: { cpfInicial: cpfBusca },
               })
             }

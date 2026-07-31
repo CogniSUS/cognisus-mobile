@@ -55,7 +55,7 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === ("(auth)" as any);
 
     if (!session && !inAuthGroup) {
-      router.replace("/(auth)/login" as Href);
+      router.replace("/(auth)/sign-in" as Href);
     } else if (session && inAuthGroup) {
       router.replace("/(app)" as Href);
     }

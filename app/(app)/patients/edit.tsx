@@ -22,7 +22,7 @@ import {
   View,
 } from "react-native";
 
-export default function EditarPaciente() {
+export default function PatientEditPage() {
   const { success: showSuccess, error: showError } = useToast();
   const { id } = useLocalSearchParams();
   const pacienteId = Number(id);

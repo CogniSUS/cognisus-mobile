@@ -25,7 +25,7 @@ import {
   View,
 } from "react-native";
 
-export default function CadastroPacientePage() {
+export default function PatientCreatePage() {
   const params = useLocalSearchParams<{ cpfInicial?: string }>();
 
   const [modalDcntVisivel, setModalDcntVisivel] = useState(false);
