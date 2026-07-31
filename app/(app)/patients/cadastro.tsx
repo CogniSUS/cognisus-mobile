@@ -8,8 +8,8 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -26,6 +26,8 @@ import {
 } from "react-native";
 
 export default function CadastroPacientePage() {
+  const params = useLocalSearchParams<{ cpfInicial?: string }>();
+
   const [modalDcntVisivel, setModalDcntVisivel] = useState(false);
   const { listaEscolaridade, listaDCNT } = useDominios();
   const {
@@ -49,6 +51,12 @@ export default function CadastroPacientePage() {
       params: { cpfBuscaInicial: cpfCadastrado },
     });
   });
+
+  useEffect(() => {
+    if (params.cpfInicial) {
+      setCpf(formatCpf(params.cpfInicial));
+    }
+  }, [params.cpfInicial, setCpf]);
 
   return (
     <KeyboardAvoidingView

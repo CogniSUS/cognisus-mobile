@@ -5,8 +5,8 @@ import { calcularIdade, formatarDataBR } from "@/utils/dateHelpers";
 import { formatCpf } from "@/utils/formatters";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import { useMemo } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -23,6 +23,8 @@ export default function HomePage() {
   const { user } = useAuth();
   const { info: showInfo } = useToast();
 
+  const params = useLocalSearchParams<{ cpfBuscaInicial?: string }>();
+
   const {
     cpfBusca,
     setCpfBusca,
@@ -31,6 +33,16 @@ export default function HomePage() {
     pacienteNaoEncontrado,
     limparBuscaPaciente,
   } = useBuscaPaciente();
+
+  // 2. Se houver o parâmetro de volta, preenchemos a busca e limpamos a URL
+  useEffect(() => {
+    if (params.cpfBuscaInicial) {
+      setCpfBusca(formatCpf(params.cpfBuscaInicial));
+
+      // Limpa o parâmetro da URL para não causar bugs de re-renderização
+      router.setParams({ cpfBuscaInicial: undefined });
+    }
+  }, [params.cpfBuscaInicial, setCpfBusca]);
 
   const nomeProfissional = useMemo(() => {
     return user?.user_metadata?.nome_completo || user?.email || "Profissional";
@@ -184,7 +196,14 @@ export default function HomePage() {
       {pacienteNaoEncontrado && (
         <View style={styles.notFoundCard}>
           <Text style={styles.notFoundText}>Paciente não encontrado</Text>
-          <Pressable onPress={() => router.push("/(app)/patients/cadastro")}>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: "/(app)/patients/cadastro",
+                params: { cpfInicial: cpfBusca },
+              })
+            }
+          >
             <LinearGradient
               colors={["#B12CF7", "#9D22F0", "#8A18E8"]}
               start={{ x: 0, y: 0 }}
