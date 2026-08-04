@@ -1,4 +1,4 @@
-import { getDB } from "@/database/database";
+import buscarPorCpf from "@/database/repositories/pacienteRepository";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -15,17 +15,8 @@ export default function ResultsPage(){
           return Alert.alert("Aviso", "CPF precisa ter 11 números")
         }
 
-        const db = await getDB();
-        const paciente = await db.getFirstAsync<{
-          id: number
-          nome_completo: string
-          cpf: string
-        }>(
-          `SELECT id, nome_completo,cpf
-          FROM paciente
-          WHERE cpf =?`,
-          [cpfLimpo]
-        )
+        const paciente = await buscarPorCpf(cpfLimpo)
+        
         if(!paciente){
           return Alert.alert("Paciente não encontrado");
         }
