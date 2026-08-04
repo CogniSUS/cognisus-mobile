@@ -1,5 +1,6 @@
-import { supabase } from "@/utils/supabase";
+import Logo from "@/assets/images/file.jpg";
 import { useToast } from "@/hooks/useToast";
+import { supabase } from "@/utils/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -14,9 +15,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Logo from "@/assets/images/file.jpg";
 
-export default function Login() {
+export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -100,7 +100,7 @@ export default function Login() {
           <TouchableOpacity>
             <Text
               style={style.secondaryButton}
-              onPress={() => router.push("/cadastro")}
+              onPress={() => router.push("/sign-up")}
             >
               Cadastrar novo usuário
             </Text>

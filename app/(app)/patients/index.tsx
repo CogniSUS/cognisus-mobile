@@ -8,11 +8,7 @@ import { Patient } from "@/types/patient";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import {
-  useCallback,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -137,9 +133,7 @@ export default function PatientsPage() {
   );
 
   const filteredPatients = useMemo(() => {
-    const normalizedSearch = search
-      .trim()
-      .toLocaleLowerCase("pt-BR");
+    const normalizedSearch = search.trim().toLocaleLowerCase("pt-BR");
 
     if (!normalizedSearch) {
       return patients;
@@ -161,7 +155,7 @@ export default function PatientsPage() {
 
   function handleAddPatient() {
     router.push({
-      pathname: "/",
+      pathname: "/patients/create",
       params: {
         abrirCadastro: "true",
       },
@@ -179,7 +173,7 @@ export default function PatientsPage() {
 
   function handleEditPatient(patient: PatientListItem) {
     router.push({
-      pathname: "/patients/edicao_paciente",
+      pathname: "/patients/edit",
       params: {
         id: String(patient.id),
       },

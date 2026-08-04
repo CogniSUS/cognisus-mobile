@@ -17,7 +17,7 @@ import {
 
 type SexoPaciente = "masculino" | "feminino" | "outro";
 
-export default function TestSelectionPage() {
+export default function TestSelectPage() {
   const params = useLocalSearchParams<{
     patientId?: string;
     nome?: string;
@@ -82,7 +82,7 @@ export default function TestSelectionPage() {
     setIsConfirming(true);
 
     router.push({
-      pathname: "/tests/selecao_unidade",
+      pathname: "/tests/select-unit",
       params: {
         patientId: String(selectedPatient.id),
         nome: selectedPatient.nome_completo,

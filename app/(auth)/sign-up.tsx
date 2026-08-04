@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 
-export default function Cadastro() {
+export default function SignUpPage() {
   const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");

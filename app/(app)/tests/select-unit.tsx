@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 
-export default function SelecaoUnidade() {
+export default function TestSelectUnitPage() {
   const { error: showError, info: showInfo } = useToast();
 
   const params = useLocalSearchParams<{
@@ -52,7 +52,7 @@ export default function SelecaoUnidade() {
 
   function voltarParaSelecao() {
     router.replace({
-      pathname: "/tests/selection",
+      pathname: "/tests/select",
       params: {
         patientId: params.patientId,
         nome: params.nome,

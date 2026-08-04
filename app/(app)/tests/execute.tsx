@@ -19,7 +19,7 @@ import {
   View,
 } from "react-native";
 
-export default function ExecuteTest() {
+export default function TestExecutePage() {
   const { user } = useAuth();
   const router = useRouter();
   const { info: showInfo, success: showSuccess } = useToast();
