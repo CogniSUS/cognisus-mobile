@@ -50,7 +50,7 @@ export default function HomePage() {
     if (!pacienteEncontrado) return showInfo("Selecione um paciente válido.");
 
     router.push({
-      pathname: "/tests/select",
+      pathname: "/tests/select-instrument",
       params: {
         patientId: String(pacienteEncontrado.id),
         nome: pacienteEncontrado.nome_completo,
