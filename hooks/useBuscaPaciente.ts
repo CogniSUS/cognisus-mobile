@@ -1,4 +1,4 @@
-import { PacienteRepository } from "@/database/repositories/PacienteRepository";
+import { PacienteRepository } from "@/database/repositories/PatientRepository";
 import { useToast } from "@/hooks/useToast";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -54,7 +54,10 @@ export function useBuscaPaciente() {
         setPacienteEncontrado(null);
         setPacienteNaoEncontrado(false);
 
-        const paciente = await PacienteRepository.buscarPorCpf(cpfNumeros);
+        const paciente =
+          await PacienteRepository.buscarPorCpfComEscolaridadeEAvaliacao(
+            cpfNumeros,
+          );
 
         if (!paciente) {
           setPacienteNaoEncontrado(true);

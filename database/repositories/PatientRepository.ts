@@ -20,12 +20,31 @@ type PacienteBusca = {
   ultima_avaliacao: string | null;
 };
 
+type PacienteResumo = {
+  id: number;
+  nome_completo: string;
+  cpf: string;
+};
+
 class PacienteRepositoryImpl extends BaseRepository<PacienteBusca> {
   constructor() {
     super("paciente");
   }
 
-  async buscarPorCpf(cpfNumeros: string): Promise<PacienteBusca | null> {
+  async buscarPorCpf(cpfNumeros: string): Promise<PacienteResumo | null> {
+    const db = await getDB();
+    const paciente = await db.getFirstAsync<PacienteResumo>(
+      `SELECT id, nome_completo, cpf
+       FROM paciente
+       WHERE cpf = ?`,
+      [cpfNumeros],
+    );
+    return paciente ?? null;
+  }
+
+  async buscarPorCpfComEscolaridadeEAvaliacao(
+    cpfNumeros: string,
+  ): Promise<PacienteBusca | null> {
     const db = await getDB();
 
     return await db.getFirstAsync<PacienteBusca>(

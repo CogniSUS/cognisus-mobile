@@ -1,4 +1,5 @@
 import { useBuscaHistorico } from "@/hooks/useBuscarHistorico";
+import { formatCpf } from "@/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { ActivityIndicator, Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -21,20 +22,7 @@ export default function ResultsPage(){
                   value={cpfBusca}
                   style={styles.input}
                   maxLength={14}
-                  onChangeText={
-                    (text) => { let cpf = text.replace(/\D/g, ""); 
-                    if (cpf.length > 3) {
-                       cpf = cpf.replace(/(\d{3})(\d)/, "$1.$2"); 
-                    } 
-                    if (cpf.length > 7) { 
-                      cpf = cpf.replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
-                    } 
-                    if (cpf.length > 11) { 
-                      cpf = cpf.replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
-                    } 
-                    setCpfBusca(cpf); 
-                    }}
-                />
+                  onChangeText={(text) => setCpfBusca(formatCpf(text))}/>
               </View>
               <TouchableOpacity style={styles.button} onPress={getBuscarHistorico}>
                 {loading ?(
