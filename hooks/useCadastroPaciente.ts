@@ -1,4 +1,4 @@
-import { PacienteRepository } from "@/database/repositories/PacienteRepository";
+import { PacienteRepository } from "@/database/repositories/PatientRepository";
 import { useToast } from "@/hooks/useToast";
 import { useState } from "react";
 
