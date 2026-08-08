@@ -19,6 +19,8 @@ import {
 } from "react-native";
 
 export default function TestExecutePage() {
+  const CLASSIFICAO_NORMAL = "Normal";
+  const CLASSIFICAO_DEFICIT = "Possível Déficit Cognitivo";
   const { user } = useAuth();
   const router = useRouter();
   const { info: showInfo, success: showSuccess, error: showError } = useToast();
@@ -140,7 +142,7 @@ export default function TestExecutePage() {
         notaCorte = 20;
     }
 
-    return scoreTotal >= notaCorte ? "Normal" : "Possível Déficit Cognitivo";
+    return scoreTotal >= notaCorte ? CLASSIFICAO_NORMAL : CLASSIFICAO_DEFICIT;
   };
 
   const finalizar = async () => {

@@ -1,17 +1,19 @@
+import { SkillBarComponent } from "@/components/ui/SkillBar";
+import { SpeedometerComponent } from "@/components/ui/Speedometer";
 import { useAvaliacaoResult } from "@/hooks/useAvaliacaoResults";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import Svg, { Circle, G, Path, Polygon } from "react-native-svg";
 
 export default function ResultsDetailsPage() {
+  const CLASSIFICAO_NORMAL = "Normal";
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { resultado, loading } = useAvaliacaoResult(id);
@@ -25,7 +27,7 @@ export default function ResultsDetailsPage() {
     );
   }
 
-  const isNormal = resultado.classificacao === "Normal";
+  const isNormal = resultado.classificacao === CLASSIFICAO_NORMAL;
   const dataFormatada = new Date(resultado.data_inicio).toLocaleDateString(
     "pt-BR",
   );
@@ -56,7 +58,7 @@ export default function ResultsDetailsPage() {
         {/* Card do Resultado Final com Velocímetro */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Resultado Final</Text>
-          <Speedometer score={resultado.score_total} />
+          <SpeedometerComponent score={resultado.score_total} />
         </View>
 
         {/* Card de Classificação */}
@@ -97,10 +99,18 @@ export default function ResultsDetailsPage() {
         {/* Habilidades Específicas */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Habilidades Específicas</Text>
-          <SkillBar label="Orientação" score={scoreOrientacao} max={10} />
-          <SkillBar label="Memória" score={scoreMemoria} max={6} />
-          <SkillBar label="Atenção e Cálculo" score={scoreAtencao} max={5} />
-          <SkillBar label="Linguagem" score={scoreLinguagem} max={9} />
+          <SkillBarComponent
+            label="Orientação"
+            score={scoreOrientacao}
+            max={10}
+          />
+          <SkillBarComponent label="Memória" score={scoreMemoria} max={6} />
+          <SkillBarComponent
+            label="Atenção e Cálculo"
+            score={scoreAtencao}
+            max={5}
+          />
+          <SkillBarComponent label="Linguagem" score={scoreLinguagem} max={9} />
         </View>
 
         {/* Condutas Sugeridas */}
@@ -149,87 +159,6 @@ export default function ResultsDetailsPage() {
           <Text style={styles.btnOutlineText}>Ver Todos os Resultados</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
-  );
-}
-
-// -----------------------------------------------------
-// Subcomponentes da Tela
-// -----------------------------------------------------
-
-function Speedometer({ score }: { score: number }) {
-  // Mantém o score entre 0 e 30 por segurança
-  const safeScore = Math.min(30, Math.max(0, score));
-
-  // O ponteiro varre 180 graus (da esquerda pra direita)
-  const angle = (safeScore / 30) * 180;
-
-  return (
-    <View style={styles.speedometerContainer}>
-      <Svg width="220" height="130" viewBox="0 0 200 120">
-        {/* Arco Vermelho (Esquerda: 0 a 10 pontos) */}
-        <Path
-          d="M 20 100 A 80 80 0 0 1 60 30.72"
-          fill="none"
-          stroke="#EF4444"
-          strokeWidth="18"
-          strokeLinecap="round"
-        />
-
-        {/* Arco Amarelo (Centro: 11 a 20 pontos) */}
-        <Path
-          d="M 60 30.72 A 80 80 0 0 1 140 30.72"
-          fill="none"
-          stroke="#FBBF24"
-          strokeWidth="18"
-        />
-
-        {/* Arco Verde (Direita: 21 a 30 pontos) */}
-        <Path
-          d="M 140 30.72 A 80 80 0 0 1 180 100"
-          fill="none"
-          stroke="#34D399"
-          strokeWidth="18"
-          strokeLinecap="round"
-        />
-
-        {/* Ponteiro Pivô Dinâmico */}
-        <G rotation={angle} origin="100, 100">
-          <Polygon points="100,95 100,105 26,100" fill="#1F2937" />
-          <Circle cx="100" cy="100" r="10" fill="#1F2937" />
-        </G>
-      </Svg>
-
-      <View style={styles.speedometerTextContainer}>
-        <Text style={styles.gaugeScore}>{safeScore}</Text>
-        <Text style={styles.gaugeMax}>de 30 pontos</Text>
-      </View>
-    </View>
-  );
-}
-
-function SkillBar({
-  label,
-  score,
-  max,
-}: {
-  label: string;
-  score: number;
-  max: number;
-}) {
-  const percentage = Math.min(100, Math.max(0, (score / max) * 100));
-
-  return (
-    <View style={styles.skillContainer}>
-      <View style={styles.skillHeader}>
-        <Text style={styles.skillLabel}>{label}</Text>
-        <Text style={styles.skillScore}>
-          {score}/{max}
-        </Text>
-      </View>
-      <View style={styles.progressBarBg}>
-        <View style={[styles.progressBarFill, { width: `${percentage}%` }]} />
-      </View>
     </View>
   );
 }
@@ -299,27 +228,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: "center",
   },
-  // Estilos do Velocímetro (Speedometer)
-  speedometerContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    height: 140,
-    paddingTop: 10,
-  },
-  speedometerTextContainer: {
-    position: "absolute",
-    bottom: 5,
-    alignItems: "center",
-  },
-  gaugeScore: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#1F2937",
-  },
-  gaugeMax: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
   classificationCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -337,34 +245,6 @@ const styles = StyleSheet.create({
   classificationSubtitle: {
     fontSize: 14,
     marginTop: 4,
-  },
-  skillContainer: {
-    marginBottom: 16,
-  },
-  skillHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  skillLabel: {
-    fontSize: 14,
-    color: "#4B5563",
-  },
-  skillScore: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1F2937",
-  },
-  progressBarBg: {
-    height: 8,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: "#A824EE",
-    borderRadius: 4,
   },
   conductHeader: {
     flexDirection: "row",
