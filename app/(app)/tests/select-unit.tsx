@@ -52,7 +52,7 @@ export default function TestSelectUnitPage() {
 
   function voltarParaSelecao() {
     router.replace({
-      pathname: "/tests/select",
+      pathname: "/tests/select-instrument",
       params: {
         patientId: params.patientId,
         nome: params.nome,

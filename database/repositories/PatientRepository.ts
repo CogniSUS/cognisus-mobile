@@ -19,6 +19,21 @@ type PacienteBusca = {
   escolaridade_nome: string | null;
   ultima_avaliacao: string | null;
 };
+export interface AvaliacaoResult {
+  id: number;
+  data_inicio: string;
+  score_total: number;
+  classificacao: string;
+  score_orientacao_espacial: number;
+  score_orientacao_temporal: number;
+  score_memoria_recente: number;
+  score_memoria_imediata: number;
+  score_atencao: number;
+  score_linguagem: number;
+  score_visuoespacial: number;
+  paciente_nome: string;
+  instrumento_nome: string;
+}
 
 type PacienteResumo = {
   id: number;

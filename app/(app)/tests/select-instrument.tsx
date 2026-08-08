@@ -17,7 +17,7 @@ import {
 
 type SexoPaciente = "masculino" | "feminino" | "outro";
 
-export default function TestSelectPage() {
+export default function TestSelectInstrumentPage() {
   const params = useLocalSearchParams<{
     patientId?: string;
     nome?: string;

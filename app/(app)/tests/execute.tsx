@@ -11,7 +11,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,9 +19,11 @@ import {
 } from "react-native";
 
 export default function TestExecutePage() {
+  const CLASSIFICAO_NORMAL = "Normal";
+  const CLASSIFICAO_DEFICIT = "Possível Déficit Cognitivo";
   const { user } = useAuth();
   const router = useRouter();
-  const { info: showInfo, success: showSuccess } = useToast();
+  const { info: showInfo, success: showSuccess, error: showError } = useToast();
 
   const params = useLocalSearchParams<{
     patientId: string;
@@ -141,7 +142,7 @@ export default function TestExecutePage() {
         notaCorte = 20;
     }
 
-    return scoreTotal >= notaCorte ? "Normal" : "Possível Déficit Cognitivo";
+    return scoreTotal >= notaCorte ? CLASSIFICAO_NORMAL : CLASSIFICAO_DEFICIT;
   };
 
   const finalizar = async () => {
@@ -183,7 +184,7 @@ export default function TestExecutePage() {
       const agora = new Date().toISOString();
 
       // 5. Executamos o INSERT com todas as colunas exigidas pelo seu banco local
-      await db.runAsync(
+      const resultadoInsert = await db.runAsync(
         `INSERT INTO avaliacao_teste_meem (
           created_at,
           update_at,
@@ -232,13 +233,15 @@ export default function TestExecutePage() {
 
       // 6. Alerta de sucesso e redirecionamento de tela
       showSuccess("Teste finalizado e salvo com sucesso!");
-      router.replace("/"); // Redireciona de volta para a Home limpando a pilha
+      router.push({
+        pathname: "/(app)/results/[id]",
+        params: {
+          id: String(resultadoInsert.lastInsertRowId),
+        },
+      });
     } catch (error) {
       console.error("Erro ao persistir avaliação no SQLite:", error);
-      Alert.alert(
-        "Erro",
-        "Não foi possível salvar o resultado do teste localmente.",
-      );
+      showError("Não foi possível salvar o resultado do teste localmente.");
     } finally {
       setLoadingDados(false);
     }
