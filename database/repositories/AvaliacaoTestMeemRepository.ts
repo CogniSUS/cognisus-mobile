@@ -15,6 +15,7 @@ export interface AvaliacaoResult {
   score_visuoespacial: number;
   paciente_nome: string;
   instrumento_nome: string;
+  unidade_nome: string;
 }
 
 class AvaliacaoTestMeemRepositoryImpl extends BaseRepository<AvaliacaoResult> {
@@ -29,10 +30,12 @@ class AvaliacaoTestMeemRepositoryImpl extends BaseRepository<AvaliacaoResult> {
       SELECT 
         a.*, 
         p.nome_completo as paciente_nome, 
-        i.nome as instrumento_nome 
+        i.nome as instrumento_nome,
+        u.nome as unidade_nome
       FROM avaliacao_teste_meem a
       JOIN paciente p ON a.id_paciente = p.id
       JOIN instrumento_avaliacao i ON a.id_instrumento = i.id
+      LEFT JOIN unidade_saude u ON a.unidade_saude = u.id
       WHERE a.id = ? 
       LIMIT 1
     `;

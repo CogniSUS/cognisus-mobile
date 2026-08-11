@@ -17,13 +17,17 @@ export function useAvaliacaoResult(id: string) {
         );
         setResultado(data);
       } catch (error) {
-        console.error("Erro ao carregar resultado:", error);
+        console.error("Erro ao carregar resultado da avaliação:", error);
       } finally {
         setLoading(false);
       }
     }
 
-    if (id) fetchResultado();
+    if (id) {
+      fetchResultado();
+    } else {
+      setLoading(false);
+    }
   }, [id]);
 
   return { resultado, loading };

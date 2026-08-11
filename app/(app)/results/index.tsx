@@ -1,7 +1,6 @@
 import { useBuscaHistorico } from "@/hooks/useBuscarHistorico";
 import { formatCpf } from "@/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import {
   ActivityIndicator,
   Dimensions,
@@ -42,12 +41,6 @@ export default function ResultsPage() {
           ) : (
             <Text style={styles.textButton}>Buscar Histórico</Text>
           )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.secundaryButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.secundaryTextButton}>Voltar</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -112,26 +105,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
   },
-  secundaryButton: {
-    height: 50,
-    width: "85%",
-    marginTop: 10,
-    alignSelf: "center",
-    borderRadius: 20,
-    borderColor: "#7a7a7a",
-    borderWidth: 1,
-    justifyContent: "center",
-  },
   textButton: {
     fontSize: 20,
     fontWeight: "500",
     color: "#ffffff",
-    alignSelf: "center",
-  },
-  secundaryTextButton: {
-    fontSize: 20,
-    fontWeight: "500",
-    color: "#2e2d2d",
     alignSelf: "center",
   },
 });

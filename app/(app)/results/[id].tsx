@@ -1,6 +1,8 @@
+import { SharePdfButton } from "@/components/ui/SharePdfButton";
 import { SkillBarComponent } from "@/components/ui/SkillBar";
 import { SpeedometerComponent } from "@/components/ui/Speedometer";
 import { useAvaliacaoResult } from "@/hooks/useAvaliacaoResults";
+import { useAuth } from "@/providers/AuthProvider";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -17,8 +19,9 @@ export default function ResultsDetailsPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { resultado, loading } = useAvaliacaoResult(id);
+  const { user } = useAuth();
 
-  if (loading || !resultado) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#9D22F0" />
@@ -27,6 +30,25 @@ export default function ResultsDetailsPage() {
     );
   }
 
+  if (!resultado) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Feather name="alert-circle" size={48} color="#EF4444" />
+        <Text style={[styles.loadingText, { color: "#EF4444", marginTop: 16 }]}>
+          Nenhum resultado encontrado.
+        </Text>
+        <TouchableOpacity
+          style={styles.btnOutline}
+          onPress={() => router.push("/")}
+        >
+          <Text style={styles.btnOutlineText}>Voltar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const nomeDoProfissionalDaSessao =
+    user?.user_metadata?.nome_completo || "Profissional não identificado";
   const isNormal = resultado.classificacao === CLASSIFICAO_NORMAL;
   const dataFormatada = new Date(resultado.data_inicio).toLocaleDateString(
     "pt-BR",
@@ -152,8 +174,15 @@ export default function ResultsDetailsPage() {
           </View>
         </View>
 
+        <SharePdfButton
+          avaliacao={resultado}
+          unidadeNome={resultado.unidade_nome}
+          profissionalNome={nomeDoProfissionalDaSessao}
+          dataAvaliacao={dataFormatada}
+        />
+
         <TouchableOpacity
-          style={styles.btnOutline}
+          style={styles.btnOutlineResults}
           onPress={() => router.push("/(app)/results")}
         >
           <Text style={styles.btnOutlineText}>Ver Todos os Resultados</Text>
@@ -264,14 +293,26 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#A824EE",
     paddingVertical: 16,
+    paddingHorizontal: 32,
+    width: "85%",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 24,
   },
   btnOutlineText: {
     color: "#A824EE",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  btnOutlineResults: {
+    borderWidth: 1.5,
+    borderColor: "#A824EE",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    width: "100%",
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
