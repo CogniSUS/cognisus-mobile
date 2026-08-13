@@ -164,9 +164,9 @@ export default function PatientsPage() {
 
   function handlePatientPress(patient: PatientListItem) {
     router.push({
-      pathname: "/patients/[id]",
+      pathname: "/results/history",
       params: {
-        id: String(patient.id),
+        patientId: String(patient.id),
       },
     });
   }
