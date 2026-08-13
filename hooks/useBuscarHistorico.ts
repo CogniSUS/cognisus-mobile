@@ -11,25 +11,29 @@ export function useBuscaHistorico() {
     try {
       setLoading(true);
       const cpfLimpo = cpfBusca.replace(/\D/g, "");
+
       if (cpfLimpo.length !== 11) {
-        setLoading(false);
         info("CPF precisa ter 11 números");
         return;
       }
 
-      const paciente = await PacienteRepository.buscarPorCpf(cpfLimpo);
+      const paciente =
+        await PacienteRepository.buscarPorCpf(cpfLimpo);
 
       if (!paciente) {
-        setLoading(false);
         error("Paciente não encontrado");
         return;
       }
-      //funcionalidade ainda não implementada
-      //é necessario a tela de histórico do paciente
-      router.push("/(app)/informations");
+
+      router.push({
+        pathname: "/results/history",
+        params: {
+          patientId: String(paciente.id),
+        },
+      });
     } catch (err) {
-      console.log(err);
-      error("Ocorreu um erro ");
+      console.error("Erro ao buscar histórico:", err);
+      error("Ocorreu um erro ao buscar o histórico");
     } finally {
       setLoading(false);
     }
