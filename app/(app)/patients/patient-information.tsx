@@ -1,7 +1,24 @@
+import { usePacienteInformation } from "@/hooks/usePacienteInformation";
 import { Ionicons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
+
+
+
 export default function PatientInformation(){
+
+    const { patientId } = useLocalSearchParams<{
+      patientId: string;
+    }>();
+
+    const {
+      paciente,
+      loading,
+    } = usePacienteInformation(
+      patientId ? Number(patientId) : null,
+    );
+
     return(
         <View style = {styles.container}>
 
@@ -34,11 +51,11 @@ export default function PatientInformation(){
                         style={styles.name}
                         numberOfLines={2}
                     >
-                    nome
+                    {paciente?.nome_completo}
                     </Text>
 
                     <Text style={styles.cpf}>
-                        CPF: 1111111111
+                        CPF: {paciente?.cpf}
                     </Text>
 
                 </View>
@@ -68,7 +85,7 @@ export default function PatientInformation(){
                 </Text>
 
                 <Text style={styles.value}>
-                  10/10/1950
+                  {paciente?.data_nascimento}
                 </Text>
               </View>
 
@@ -90,7 +107,7 @@ export default function PatientInformation(){
               </Text>
 
               <Text style={styles.value}>
-                Masculino
+                {paciente?.sexo}
               </Text>
             </View>
 
@@ -112,7 +129,7 @@ export default function PatientInformation(){
             </View>
 
             <Text style={styles.value}>
-              Ensino Médio Completo
+              {paciente?.escolaridade_nome ?? "Não informado"}
             </Text>
 
           </View>
@@ -134,7 +151,7 @@ export default function PatientInformation(){
             </View>
 
             <Text style={styles.value}>
-              Hipertensão arterial, Diabetes Tipo 2
+              {paciente?.dcnts ?? "Nenhuma DCNT cadastrada"}
             </Text>
 
           </View>
@@ -162,7 +179,9 @@ export default function PatientInformation(){
               </Text>
 
               <Text style={styles.value}>
-                20/01/2026
+                {paciente?.ultima_avaliacao
+                  ? paciente.ultima_avaliacao
+                  : "Nenhuma avaliação"}
               </Text>
 
             </View>
@@ -172,7 +191,7 @@ export default function PatientInformation(){
 
             </View>
             <View style = {styles.boxBotton}>
-                <TouchableOpacity style={styles.button}>
+                <TouchableOpacity style={styles.button} onPress={()=>router.back()}>
                     <Text>Voltar à Lista de Paciente</Text>
                 </TouchableOpacity>
             </View>

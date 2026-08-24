@@ -41,6 +41,17 @@ type PacienteResumo = {
   cpf: string;
 };
 
+export type PacienteDetalhes = {
+  id: number;
+  nome_completo: string;
+  cpf: string;
+  data_nascimento: string;
+  sexo: "masculino" | "feminino" | "outro";
+  escolaridade_nome: string | null;
+  dcnts: string | null;
+  ultima_avaliacao: string | null;
+};
+
 class PacienteRepositoryImpl extends BaseRepository<PacienteBusca> {
   constructor() {
     super("paciente");
@@ -80,6 +91,63 @@ class PacienteRepositoryImpl extends BaseRepository<PacienteBusca> {
       LIMIT 1
       `,
       [cpfNumeros],
+    );
+  }
+
+  async buscarPorIdComDetalhes(
+    pacienteId: number,
+  ): Promise<PacienteDetalhes | null> {
+    const db = await getDB();
+
+    return await db.getFirstAsync<PacienteDetalhes>(
+      `
+      SELECT
+        p.id,
+        p.nome_completo,
+        p.cpf,
+        p.data_nascimento,
+        p.sexo,
+
+        e.tipo AS escolaridade_nome,
+
+        (
+          SELECT GROUP_CONCAT(d.tipo, ', ')
+          FROM paciente_dcnt pd
+          INNER JOIN dcnt d
+            ON d.id = pd.id_dcnt
+          WHERE pd.id_paciente = p.id
+        ) AS dcnts,
+
+        (
+          SELECT COALESCE(
+            a.data_fim,
+            a.data_inicio,
+            a.created_at
+          )
+          FROM avaliacao_teste_meem a
+          WHERE a.id_paciente = p.id
+            AND a.deleted_at IS NULL
+          ORDER BY datetime(
+            COALESCE(
+              a.data_fim,
+              a.data_inicio,
+              a.created_at
+            )
+          ) DESC
+          LIMIT 1
+        ) AS ultima_avaliacao
+
+      FROM paciente p
+
+      LEFT JOIN escolaridade e
+        ON e.id = p.escolaridade
+
+      WHERE p.id = ?
+        AND p.deleted_at IS NULL
+
+      LIMIT 1
+      `,
+      [pacienteId],
     );
   }
 
