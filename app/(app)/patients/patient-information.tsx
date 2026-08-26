@@ -1,4 +1,5 @@
 import { usePacienteInformation } from "@/hooks/usePacienteInformation";
+import { calcularIdade, formatarData } from "@/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -85,7 +86,7 @@ export default function PatientInformation(){
                 </Text>
 
                 <Text style={styles.value}>
-                  {paciente?.data_nascimento}
+                  {paciente ? formatarData(paciente.data_nascimento) : ""}
                 </Text>
               </View>
 
@@ -95,7 +96,7 @@ export default function PatientInformation(){
                 </Text>
 
                 <Text style={styles.value}>
-                  75 anos
+                  {paciente ? `${calcularIdade(paciente.data_nascimento)} anos` : ""}
                 </Text>
               </View>
 
