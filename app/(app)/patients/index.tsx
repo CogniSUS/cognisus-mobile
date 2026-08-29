@@ -1,3 +1,4 @@
+import ModalExcluirPaciente from "@/components/features/patients/delete-patient-modal";
 import {
   PatientListCard,
   PatientListItem,
@@ -11,14 +12,13 @@ import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
 
 type PatientRow = {
@@ -66,6 +66,9 @@ export default function PatientsPage() {
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [modalExcluir, setModalExcluir] = useState(false);
+  const [pacienteSelecionado, setPacienteSelecionado] =
+    useState<PatientListItem | null>(null);
 
   async function loadPatients(showLoading = true) {
     try {
@@ -164,7 +167,7 @@ export default function PatientsPage() {
 
   function handlePatientPress(patient: PatientListItem) {
     router.push({
-      pathname: "/results/history",
+      pathname: "/(app)/patients/patient-information",
       params: {
         patientId: String(patient.id),
       },
@@ -181,21 +184,8 @@ export default function PatientsPage() {
   }
 
   function handleDeletePatient(patient: PatientListItem) {
-    Alert.alert(
-      "Excluir paciente",
-      `Deseja realmente excluir ${patient.nome_completo}?`,
-      [
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-        {
-          text: "Excluir",
-          style: "destructive",
-          onPress: () => deletePatient(patient),
-        },
-      ],
-    );
+    setPacienteSelecionado(patient);
+    setModalExcluir(true);
   }
 
   async function deletePatient(patient: PatientListItem) {
@@ -344,6 +334,22 @@ export default function PatientsPage() {
           }
         />
       )}
+      <ModalExcluirPaciente
+        visible={modalExcluir}
+        nomePaciente={pacienteSelecionado?.nome_completo ?? ""}
+        onConfirmar={() => {
+          if (pacienteSelecionado) {
+            deletePatient(pacienteSelecionado);
+          }
+
+          setModalExcluir(false);
+          setPacienteSelecionado(null);
+        }}
+        onCancelar={() => {
+          setModalExcluir(false);
+          setPacienteSelecionado(null);
+        }}
+      />
     </View>
   );
 }
