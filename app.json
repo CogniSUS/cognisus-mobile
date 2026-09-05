@@ -8,7 +8,7 @@
     "scheme": "cognisusmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "owner": "CogniSUS",
+    "owner": "cognisus",
     "ios": {
       "supportsTablet": true
     },
