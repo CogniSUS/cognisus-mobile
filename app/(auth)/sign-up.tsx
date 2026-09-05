@@ -93,6 +93,7 @@ export default function SignUpPage() {
         <View style={style.boxInput}>
           <TextInput
             placeholder="Digite seu Nome"
+            placeholderTextColor="#9CA3AF"
             autoCapitalize="words"
             style={style.input}
             value={name}
@@ -103,6 +104,7 @@ export default function SignUpPage() {
         <View style={style.boxInput}>
           <TextInput
             placeholder="Digite seu CPF (somente numeros)"
+            placeholderTextColor="#9CA3AF"
             keyboardType="numeric"
             style={style.input}
             value={cpf}
@@ -116,6 +118,7 @@ export default function SignUpPage() {
             placeholder="Digite seu E-mail"
             keyboardType="email-address"
             autoCapitalize="none"
+            placeholderTextColor="#9CA3AF"
             style={style.input}
             value={email}
             onChangeText={setEmail}
@@ -125,6 +128,7 @@ export default function SignUpPage() {
         <View style={style.boxInput}>
           <TextInput
             placeholder="Digite sua senha"
+            placeholderTextColor="#9CA3AF"
             autoCapitalize="none"
             style={style.input}
             secureTextEntry={!showPassword}
@@ -142,6 +146,7 @@ export default function SignUpPage() {
         <View style={style.boxInput}>
           <TextInput
             placeholder="Confirmar Senha"
+            placeholderTextColor="#9CA3AF"
             autoCapitalize="none"
             style={style.input}
             secureTextEntry={!showPassword}
@@ -235,6 +240,7 @@ const style = StyleSheet.create({
     flex: 1,
     height: "100%",
     width: "100%",
+    color: "#1F2937",
   },
   icons: {
     marginTop: 11,

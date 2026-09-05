@@ -66,6 +66,7 @@ export default function SignInPage() {
         <View style={style.boxInput}>
           <TextInput
             placeholder="E-mail"
+            placeholderTextColor="#9CA3AF"
             style={style.input}
             value={email}
             onChangeText={setEmail}
@@ -76,6 +77,7 @@ export default function SignInPage() {
         <View style={style.boxInput}>
           <TextInput
             placeholder="Senha"
+            placeholderTextColor="#9CA3AF"
             style={style.input}
             secureTextEntry={!showPassword}
             value={password}
@@ -181,6 +183,7 @@ const style = StyleSheet.create({
     flex: 1,
     height: "100%",
     width: "100%",
+    color: "#1F2937",
   },
   icons: {
     marginTop: 11,
