@@ -1,6 +1,5 @@
+import { Escolaridade } from "@/database/models/Escolaridade";
 import { BaseRepository } from "./BaseRepository";
-
-export type Escolaridade = { id: number; tipo: string };
 
 class EscolaridadeRepositoryImpl extends BaseRepository<Escolaridade> {
   constructor() {

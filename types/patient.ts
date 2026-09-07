@@ -1,10 +1,10 @@
 export interface Patient {
-  id: number;
+  id: string;
   nome_completo: string;
   cpf: string;
   data_nascimento: string; //  YYYY-MM-DD
   sexo: "masculino" | "feminino" | "outro";
-  escolaridade?: number;
+  escolaridade?: string;
 }
 
 export function calculateAge(birthDate: string): number {

@@ -1,12 +1,11 @@
-import { PacienteDetalhes, PacienteRepository } from "@/database/repositories/PatientRepository";
+import {
+  PacienteDetalhes,
+  PacienteRepository,
+} from "@/database/repositories/PacienteRepository";
 import { useEffect, useState } from "react";
 
-export function usePacienteInformation(
-  pacienteId: number | null,
-) {
-  const [paciente, setPaciente] = useState<
-    PacienteDetalhes | null
-  >(null);
+export function usePacienteInformation(pacienteId: string | null) {
+  const [paciente, setPaciente] = useState<PacienteDetalhes | null>(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -20,16 +19,11 @@ export function usePacienteInformation(
       setLoading(true);
 
       const resultado =
-        await PacienteRepository.buscarPorIdComDetalhes(
-          pacienteId,
-        );
+        await PacienteRepository.buscarPorIdComDetalhes(pacienteId);
 
       setPaciente(resultado);
     } catch (error) {
-      console.error(
-        "Erro ao carregar paciente:",
-        error,
-      );
+      console.error("Erro ao carregar paciente:", error);
     } finally {
       setLoading(false);
     }

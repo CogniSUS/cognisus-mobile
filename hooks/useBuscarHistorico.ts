@@ -1,4 +1,4 @@
-import { PacienteRepository } from "@/database/repositories/PatientRepository";
+import { PacienteRepository } from "@/database/repositories/PacienteRepository";
 import { router } from "expo-router";
 import { useState } from "react";
 import { useToast } from "./useToast";
@@ -17,8 +17,7 @@ export function useBuscaHistorico() {
         return;
       }
 
-      const paciente =
-        await PacienteRepository.buscarPorCpf(cpfLimpo);
+      const paciente = await PacienteRepository.buscarPorCpf(cpfLimpo);
 
       if (!paciente) {
         error("Paciente não encontrado");

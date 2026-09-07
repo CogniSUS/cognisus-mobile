@@ -1,4 +1,4 @@
-import { getDB } from "@/database/database";
+import { database } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
 import {
   AntDesign,
@@ -7,6 +7,7 @@ import {
   FontAwesome5,
   Ionicons,
 } from "@expo/vector-icons";
+import { Q } from "@nozbe/watermelondb";
 import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -25,91 +26,92 @@ import {
 export default function PatientEditPage() {
   const { success: showSuccess, error: showError } = useToast();
   const { id } = useLocalSearchParams();
-  const pacienteId = Number(id);
+  // Os IDs no WatermelonDB são strings (UUID)
+  const pacienteId = String(id);
 
   const [nome, setNome] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
   const [sexo, setSexo] = useState("");
-  const [escolaridade, setEscolaridade] = useState<number | null>(null);
+  const [escolaridade, setEscolaridade] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [dcntsSelecionadas, setDcntsSelecionadas] = useState<number[]>([]);
+  // Estados de DCNT atualizados para suportar string IDs
+  const [dcntsSelecionadas, setDcntsSelecionadas] = useState<string[]>([]);
   const [modalDcntVisivel, setModalDcntVisivel] = useState(false);
 
   const [listaEscolaridade, setListaEscolaridade] = useState<
-    { id: number; tipo: string }[]
+    { id: string; tipo: string }[]
   >([]);
 
-  const [listaDCNT, setListaDCNT] = useState<{ id: number; tipo: string }[]>(
+  const [listaDCNT, setListaDCNT] = useState<{ id: string; tipo: string }[]>(
     [],
   );
 
-  const toggleDcnt = (id: number) => {
+  const toggleDcnt = (dcntId: string) => {
     setDcntsSelecionadas((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+      prev.includes(dcntId)
+        ? prev.filter((item) => item !== dcntId)
+        : [...prev, dcntId],
     );
   };
 
-  async function carregarListaEscolaridade() {
-    const db = await getDB();
-    const dados = await db.getAllAsync<{
-      id: number;
-      tipo: string;
-    }>("SELECT * FROM escolaridade");
+  async function carregarListasBase() {
+    try {
+      const escolaridadeCollection = database.collections.get("escolaridade");
+      const dcntCollection = database.collections.get("dcnt");
 
-    setListaEscolaridade(dados);
-  }
+      const [escolaridades, dcnts] = await Promise.all([
+        escolaridadeCollection.query().fetch(),
+        dcntCollection.query().fetch(),
+      ]);
 
-  async function carregarListaDCNT() {
-    const db = await getDB();
-    const dados = await db.getAllAsync<{
-      id: number;
-      tipo: string;
-    }>("SELECT * FROM dcnt");
+      setListaEscolaridade(
+        escolaridades.map((e: any) => ({ id: e.id, tipo: e.tipo })),
+      );
 
-    setListaDCNT(dados);
+      setListaDCNT(dcnts.map((d: any) => ({ id: d.id, tipo: d.tipo })));
+    } catch (error) {
+      console.error("Erro ao carregar listas base:", error);
+    }
   }
 
   async function carregarPaciente() {
-    const db = await getDB();
-
-    const paciente = await db.getFirstAsync<{
-      nome_completo: string;
-      data_nascimento: string;
-      sexo: string;
-      escolaridade: number;
-    }>(`SELECT * FROM paciente WHERE id=?`, [pacienteId]);
-
-    if (!paciente) return;
-
-    setNome(paciente.nome_completo);
-    const [ano, mes, dia] = paciente.data_nascimento.split("-");
-    setDataNascimento(`${dia}/${mes}/${ano}`);
-    setSexo(paciente.sexo);
-    setEscolaridade(paciente.escolaridade);
-
     try {
-      const dcntsDoPaciente = await db.getAllAsync<{ id_dcnt: number }>(
-        `SELECT id_dcnt FROM paciente_dcnt WHERE id_paciente = ?`,
-        [pacienteId],
-      );
-      setDcntsSelecionadas(dcntsDoPaciente.map((d) => d.id_dcnt));
-    } catch (e) {
-      console.log(
-        "Aviso: Tabela paciente_dcnt pode não existir ou estar vazia.",
-        e,
-      );
+      const pacienteCollection = database.collections.get("paciente");
+      const paciente = (await pacienteCollection.find(pacienteId)) as any;
+
+      setNome(paciente.nomeCompleto);
+      const [ano, mes, dia] = paciente.dataNascimento.split("-");
+      setDataNascimento(`${dia}/${mes}/${ano}`);
+      setSexo(paciente.sexo);
+
+      // Resgata o ID da escolaridade se houver vínculo
+      if (paciente.nivelEscolaridade) {
+        setEscolaridade(paciente.nivelEscolaridade.id);
+      }
+
+      const relacoesCollection = database.collections.get("paciente_dcnt");
+      const dcntsDoPaciente = await relacoesCollection
+        .query(Q.where("id_paciente", pacienteId))
+        .fetch();
+
+      // Mapeia os IDs das DCNTs já vinculadas via propriedade de relacionamento
+      setDcntsSelecionadas(dcntsDoPaciente.map((rel: any) => rel.dcnt.id));
+    } catch (error) {
+      console.error("Erro ao carregar paciente:", error);
+      showError("Não foi possível carregar os dados do paciente.");
     }
   }
 
   async function getEditarPaciente() {
     try {
       setLoading(true);
-      if (!nome || !dataNascimento || sexo == "" || escolaridade == null) {
+      if (!nome || !dataNascimento || sexo === "" || escolaridade === null) {
         setLoading(false);
         showError("Preencha os campos obrigatórios");
         return;
       }
+
       const partesData = dataNascimento.split("/");
 
       if (partesData.length !== 3) {
@@ -136,38 +138,43 @@ export default function PatientEditPage() {
         return;
       }
 
-      const db = await getDB();
+      // Toda mutação no banco precisa ocorrer dentro de um database.write()
+      await database.write(async () => {
+        const pacienteCollection = database.collections.get("paciente");
+        const relacoesCollection = database.collections.get("paciente_dcnt");
 
-      await db.runAsync(
-        `UPDATE paciente
-        SET
-          nome_completo=?,
-          data_nascimento=?,
-          sexo= ?,
-          escolaridade=?
-        WHERE id=?`,
-        [nome, dataFormatada, sexo, escolaridade, pacienteId],
-      );
+        // 1. Atualiza os dados principais do paciente
+        const paciente = (await pacienteCollection.find(pacienteId)) as any;
+        await paciente.update((p: any) => {
+          p.nomeCompleto = nome;
+          p.dataNascimento = dataFormatada;
+          p.sexo = sexo;
+          p.nivelEscolaridade.id = escolaridade;
+        });
 
-      await db.runAsync(`DELETE FROM paciente_dcnt WHERE id_paciente = ?`, [
-        pacienteId,
-      ]);
+        // 2. Limpa as DCNTs antigas (Soft Delete para sincronizar com Supabase)
+        const relacoesAntigas = await relacoesCollection
+          .query(Q.where("id_paciente", pacienteId))
+          .fetch();
 
-      const agora = new Date().toISOString();
+        for (const relacao of relacoesAntigas) {
+          await relacao.markAsDeleted();
+        }
 
-      for (const dcntId of dcntsSelecionadas) {
-        await db.runAsync(
-          `INSERT INTO paciente_dcnt (id_paciente, id_dcnt, created_at, sync_status) 
-           VALUES (?, ?, ?, ?)`,
-          [pacienteId, dcntId, agora, "pending"],
-        );
-      }
+        // 3. Insere as novas DCNTs selecionadas
+        for (const dcntId of dcntsSelecionadas) {
+          await relacoesCollection.create((pd: any) => {
+            pd.paciente.id = pacienteId;
+            pd.dcnt.id = dcntId;
+          });
+        }
+      });
 
       showSuccess("Paciente atualizado com sucesso!");
       router.back();
     } catch (error) {
       console.log(error);
-      showError("Erro ao conectar ao banco de dados.");
+      showError("Erro ao atualizar o paciente.");
     } finally {
       setLoading(false);
     }
@@ -175,8 +182,7 @@ export default function PatientEditPage() {
 
   useEffect(() => {
     async function carregarDados() {
-      await carregarListaEscolaridade();
-      await carregarListaDCNT();
+      await carregarListasBase();
       await carregarPaciente();
     }
 
@@ -337,7 +343,7 @@ export default function PatientEditPage() {
 
             <FlatList
               data={listaDCNT}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={(item) => item.id}
               showsVerticalScrollIndicator={false}
               renderItem={({ item }) => {
                 const isSelected = dcntsSelecionadas.includes(item.id);
@@ -386,26 +392,17 @@ export default function PatientEditPage() {
   );
 }
 
+// Estilos inalterados
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: "#F8FAFC",
-    padding: 24,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 30,
-  },
+  container: { flexGrow: 1, backgroundColor: "#F8FAFC", padding: 24 },
+  headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 30 },
   textTitle: {
     fontSize: 22,
     fontWeight: "bold",
     color: "#0f0f0f",
     marginLeft: 16,
   },
-  boxMid: {
-    width: "100%",
-  },
+  boxMid: { width: "100%" },
   boxInput: {
     height: 56,
     width: "100%",
@@ -431,10 +428,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginLeft: 12,
   },
-  picker: {
-    flex: 1,
-    marginLeft: 4,
-  },
+  picker: { flex: 1, marginLeft: 4 },
   boxBotton: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -453,23 +447,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#732cad",
   },
-  tertiaryButton: {
-    flex: 1,
-    backgroundColor: "#732cad",
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#732cad",
-  },
-  tertiaryButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#ffffff",
-  },
-  primaryButton: {
-    backgroundColor: "#2563EB",
-  },
+  tertiaryButton: { flex: 1, backgroundColor: "#732cad" },
+  cancelButtonText: { fontSize: 16, fontWeight: "700", color: "#732cad" },
+  tertiaryButtonText: { fontSize: 16, fontWeight: "700", color: "#ffffff" },
+  primaryButton: { backgroundColor: "#2563EB" },
   primaryButtonText: {
     color: "#FFFFFF",
     textAlign: "center",
@@ -509,13 +490,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderBottomWidth: 0,
   },
-  checkboxLabel: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: "#334155",
-  },
-  checkboxLabelSelected: {
-    color: "#2563EB",
-    fontWeight: "600",
-  },
+  checkboxLabel: { marginLeft: 12, fontSize: 16, color: "#334155" },
+  checkboxLabelSelected: { color: "#2563EB", fontWeight: "600" },
 });

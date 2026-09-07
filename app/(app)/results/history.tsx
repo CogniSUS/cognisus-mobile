@@ -1,16 +1,13 @@
 import { HistoryChart } from "@/components/features/results/history-chart";
 import { HistoryFilter } from "@/components/features/results/history-filter";
 import { HistoryResultCard } from "@/components/features/results/history-result-card";
-import { getDB } from "@/database/database";
-import { getPatientHistory } from "@/database/repositories/ResultRepository";
+import { HistoricoPacienteRepository } from "@/database/repositories/HistoricoPacienteRepository";
+import { PacienteRepository } from "@/database/repositories/PacienteRepository";
 import { CognitiveResult, ResultFilter } from "@/types/result";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import {
-  useCallback,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -18,10 +15,9 @@ import {
   Text,
   View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 
 type PatientHeader = {
-  id: number;
+  id: string;
   nome_completo: string;
   cpf: string;
 };
@@ -31,19 +27,12 @@ export default function PatientHistoryPage() {
     patientId?: string;
   }>();
 
-  const patientId = Number(params.patientId);
+  const patientId = params.patientId;
 
-  const [patient, setPatient] =
-    useState<PatientHeader | null>(null);
-
-  const [results, setResults] =
-    useState<CognitiveResult[]>([]);
-
-  const [filter, setFilter] =
-    useState<ResultFilter>("all");
-
-  const [loading, setLoading] =
-    useState(true);
+  const [patient, setPatient] = useState<PatientHeader | null>(null);
+  const [results, setResults] = useState<CognitiveResult[]>([]);
+  const [filter, setFilter] = useState<ResultFilter>("all");
+  const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,34 +48,25 @@ export default function PatientHistoryPage() {
     try {
       setLoading(true);
 
-      const db = await getDB();
+      // 1. Busca os dados do paciente usando o Repositório ORM
+      const paciente = await PacienteRepository.buscarPorId(patientId);
 
-      const patientData =
-        await db.getFirstAsync<PatientHeader>(
-          `
-            SELECT
-              id,
-              nome_completo,
-              cpf
-            FROM paciente
-            WHERE id = ?
-              AND deleted_at IS NULL
-            LIMIT 1
-          `,
-          [patientId],
-        );
+      if (paciente) {
+        setPatient({
+          id: paciente.id,
+          nome_completo: paciente.nomeCompleto,
+          cpf: paciente.cpf,
+        });
+      } else {
+        setPatient(null);
+      }
 
-      setPatient(patientData || null);
-
+      // 2. Busca o histórico de testes do paciente usando o novo Repositório ORM
       const history =
-        await getPatientHistory(patientId);
-
+        await HistoricoPacienteRepository.buscarHistorico(patientId);
       setResults(history);
     } catch (error) {
-      console.error(
-        "Erro ao carregar histórico:",
-        error,
-      );
+      console.error("Erro ao carregar histórico:", error);
     } finally {
       setLoading(false);
     }
@@ -98,10 +78,7 @@ export default function PatientHistoryPage() {
     }
 
     return results.filter((result) => {
-      const abbreviation =
-        result.testAbbreviation
-          .trim()
-          .toLowerCase();
+      const abbreviation = result.testAbbreviation.trim().toLowerCase();
 
       if (filter === "meem") {
         return abbreviation === "meem";
@@ -111,10 +88,7 @@ export default function PatientHistoryPage() {
         return abbreviation === "moca";
       }
 
-      return (
-        abbreviation === "fluência" ||
-        abbreviation === "fluencia"
-      );
+      return abbreviation === "fluência" || abbreviation === "fluencia";
     });
   }, [results, filter]);
 
@@ -123,16 +97,10 @@ export default function PatientHistoryPage() {
       return 30;
     }
 
-    return Math.max(
-      ...filteredResults.map(
-        (result) => result.maxScore,
-      ),
-    );
+    return Math.max(...filteredResults.map((result) => result.maxScore));
   }, [filteredResults]);
 
-  function handleResultPress(
-    result: CognitiveResult,
-  ) {
+  function handleResultPress(result: CognitiveResult) {
     router.push({
       pathname: "/results/[id]",
       params: {
@@ -145,10 +113,7 @@ export default function PatientHistoryPage() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator
-          size="large"
-          color="#A824EE"
-        />
+        <ActivityIndicator size="large" color="#A824EE" />
       </View>
     );
   }
@@ -162,42 +127,24 @@ export default function PatientHistoryPage() {
       {patient && (
         <View style={styles.patientCard}>
           <View style={styles.avatar}>
-            <Ionicons
-              name="person-outline"
-              size={24}
-              color="#A824EE"
-            />
+            <Ionicons name="person-outline" size={24} color="#A824EE" />
           </View>
 
           <View>
-            <Text style={styles.patientName}>
-              {patient.nome_completo}
-            </Text>
+            <Text style={styles.patientName}>{patient.nome_completo}</Text>
 
-            <Text style={styles.patientCpf}>
-              CPF: {patient.cpf}
-            </Text>
+            <Text style={styles.patientCpf}>CPF: {patient.cpf}</Text>
           </View>
         </View>
       )}
 
-      <Text style={styles.title}>
-        Histórico de Avaliações
-      </Text>
+      <Text style={styles.title}>Histórico de Avaliações</Text>
 
-      <HistoryFilter
-        value={filter}
-        onChange={setFilter}
-      />
+      <HistoryFilter value={filter} onChange={setFilter} />
 
-      <HistoryChart
-        results={filteredResults}
-        maxScore={maxScore}
-      />
+      <HistoryChart results={filteredResults} maxScore={maxScore} />
 
-      <Text style={styles.testsTitle}>
-        Testes Realizados
-      </Text>
+      <Text style={styles.testsTitle}>Testes Realizados</Text>
 
       <View style={styles.resultsList}>
         {filteredResults.map((result) => (
@@ -211,8 +158,7 @@ export default function PatientHistoryPage() {
         {filteredResults.length === 0 && (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              Nenhuma avaliação encontrada para
-              este filtro.
+              Nenhuma avaliação encontrada para este filtro.
             </Text>
           </View>
         )}
@@ -221,37 +167,26 @@ export default function PatientHistoryPage() {
   );
 }
 
+// Os estilos (styles) permanecem inalterados.
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F3F2F8",
-  },
-
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-
+  container: { flex: 1, backgroundColor: "#F3F2F8" },
+  content: { padding: 16, paddingBottom: 32 },
   loadingContainer: {
     flex: 1,
     backgroundColor: "#F3F2F8",
     alignItems: "center",
     justifyContent: "center",
   },
-
   patientCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 15,
     padding: 16,
-
     flexDirection: "row",
     alignItems: "center",
     gap: 13,
-
     borderWidth: 1,
     borderColor: "#ECE8F2",
   },
-
   avatar: {
     width: 48,
     height: 48,
@@ -260,19 +195,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  patientName: {
-    color: "#334155",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  patientCpf: {
-    color: "#94A3B8",
-    fontSize: 12,
-    marginTop: 3,
-  },
-
+  patientName: { color: "#334155", fontSize: 16, fontWeight: "700" },
+  patientCpf: { color: "#94A3B8", fontSize: 12, marginTop: 3 },
   title: {
     color: "#334155",
     fontSize: 19,
@@ -280,7 +204,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 14,
   },
-
   testsTitle: {
     color: "#334155",
     fontSize: 17,
@@ -288,19 +211,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
     marginBottom: 12,
   },
-
-  resultsList: {
-    gap: 12,
-  },
-
-  emptyCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 24,
-  },
-
-  emptyText: {
-    color: "#64748B",
-    textAlign: "center",
-  },
+  resultsList: { gap: 12 },
+  emptyCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 24 },
+  emptyText: { color: "#64748B", textAlign: "center" },
 });

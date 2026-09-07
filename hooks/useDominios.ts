@@ -1,14 +1,14 @@
+import { Dcnt } from "@/database/models/Dcnt";
+import { Escolaridade } from "@/database/models/Escolaridade";
 import { DcntRepository } from "@/database/repositories/DcntRepository";
 import { EscolaridadeRepository } from "@/database/repositories/EscolaridadeRepository";
 import { useEffect, useState } from "react";
 
 export function useDominios() {
-  const [listaEscolaridade, setListaEscolaridade] = useState<
-    { id: number; tipo: string }[]
-  >([]);
-  const [listaDCNT, setListaDCNT] = useState<{ id: number; tipo: string }[]>(
+  const [listaEscolaridade, setListaEscolaridade] = useState<Escolaridade[]>(
     [],
   );
+  const [listaDCNT, setListaDCNT] = useState<Dcnt[]>([]);
 
   useEffect(() => {
     async function carregarDados() {

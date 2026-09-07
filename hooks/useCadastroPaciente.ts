@@ -1,4 +1,4 @@
-import { PacienteRepository } from "@/database/repositories/PatientRepository";
+import { PacienteRepository } from "@/database/repositories/PacienteRepository";
 import { useToast } from "@/hooks/useToast";
 import { useState } from "react";
 
@@ -8,7 +8,7 @@ export function useCadastroPaciente(onSucesso: (cpf: string) => void) {
   const [dataNascimento, setDataNascimento] = useState("");
   const [sexo, setSexo] = useState("");
   const [escolaridade, setEscolaridade] = useState("");
-  const [dcntsSelecionadas, setDcntsSelecionadas] = useState<number[]>([]);
+  const [dcntsSelecionadas, setDcntsSelecionadas] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   const { success: showSuccess, error: showError, info: showInfo } = useToast();
@@ -22,7 +22,7 @@ export function useCadastroPaciente(onSucesso: (cpf: string) => void) {
     setDcntsSelecionadas([]);
   }
 
-  function toggleDcnt(id: number) {
+  function toggleDcnt(id: string) {
     setDcntsSelecionadas((prev) => {
       if (prev.includes(id)) {
         return prev.filter((item) => item !== id);
