@@ -1,6 +1,5 @@
+import { Dcnt } from "@/database/models/Dcnt";
 import { BaseRepository } from "./BaseRepository";
-
-export type Dcnt = { id: number; tipo: string };
 
 class DcntRepositoryImpl extends BaseRepository<Dcnt> {
   constructor() {

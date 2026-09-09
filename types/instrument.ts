@@ -1,5 +1,5 @@
 export interface Instrument {
-  id: number;
+  id: string;
   nome: string;
   abreviacao: string;
   tempo_estimado_min: number;

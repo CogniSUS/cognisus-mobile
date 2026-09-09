@@ -1,7 +1,9 @@
-import { getDB, initDB } from "@/database/database";
+import { database } from "@/database/database";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
-import { initialSync } from "@/services/sync/initialSync";
+import { syncData } from "@/services/sync/initialSync";
+import { Q } from "@nozbe/watermelondb";
+import NetInfo from "@react-native-community/netinfo";
 import { Href, Slot, useRouter, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
@@ -11,30 +13,40 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      // Se a conexão voltou e tiver internet, roda o sync em background
+      if (state.isConnected && state.isInternetReachable) {
+        console.log("Internet detectada! Rodando sync em background...");
+        syncData().catch((err) =>
+          console.error("Erro no background sync:", err),
+        );
+      }
+    });
+
+    return () => unsubscribe();
+  }, [session]);
+
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     async function runSync() {
       if (session?.user?.id) {
         try {
-          const db = await getDB();
+          const profissionalCollection =
+            database.collections.get("profissional");
+          const count = await profissionalCollection
+            .query(Q.where("user_id", session.user.id))
+            .fetchCount();
 
-          // Buscamos pelo user_id que vem do Auth do Supabase
-          const profissionalLocal = await db.getFirstAsync<{ id: number }>(
-            "SELECT id FROM profissional WHERE user_id = ? LIMIT 1;",
-            [session.user.id],
-          );
-
-          if (profissionalLocal) {
-            setIsSyncing(false);
-            return; // Sai da função sem executar o initialSync
+          if (count === 0) {
+            setIsSyncing(true);
           }
 
-          setIsSyncing(true);
-          console.log("Iniciando sincronização de dados...");
-
-          await initialSync(session.user.id);
-
+          console.log("Sincronizando dados...");
+          await syncData();
           console.log("Sincronização concluída com sucesso!");
         } catch (error) {
           console.error("Erro crítico na sincronização:", error);
@@ -82,25 +94,6 @@ function RootLayoutNav() {
 }
 
 export default function AppLayout() {
-  const [isDbReady, setIsDbReady] = useState(false);
-
-  useEffect(() => {
-    const initializeDB = async () => {
-      await initDB();
-      setIsDbReady(true);
-    };
-
-    initializeDB();
-  }, []);
-
-  if (!isDbReady) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Preparando o aplicativo...</Text>
-      </View>
-    );
-  }
-
   return (
     <AuthProvider>
       <ToastProvider>

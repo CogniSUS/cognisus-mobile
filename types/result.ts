@@ -1,9 +1,9 @@
 export type ResultFilter = "all" | "meem" | "moca" | "fluencia";
 
 export type CognitiveResult = {
-  id: number;
-  patientId: number;
-  instrumentId: number;
+  id: string;
+  patientId: string;
+  instrumentId: string;
 
   testName: string;
   testAbbreviation: string;

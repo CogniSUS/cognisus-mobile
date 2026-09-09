@@ -76,6 +76,7 @@ export default function PatientCreatePage() {
           <View style={styles.boxInput}>
             <TextInput
               placeholder="Nome completo"
+              placeholderTextColor="#9CA3AF"
               value={nome}
               onChangeText={setNome}
               autoCapitalize="words"
@@ -88,6 +89,7 @@ export default function PatientCreatePage() {
           <View style={styles.boxInput}>
             <TextInput
               placeholder="Digite seu CPF"
+              placeholderTextColor="#9CA3AF"
               keyboardType="numeric"
               value={cpf}
               maxLength={14}
@@ -101,6 +103,7 @@ export default function PatientCreatePage() {
           <View style={styles.boxInput}>
             <TextInput
               placeholder="Data de nascimento"
+              placeholderTextColor="#9CA3AF"
               value={dataNascimento}
               onChangeText={(text) => {
                 let formatted = text.replace(/\D/g, "");

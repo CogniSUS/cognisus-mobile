@@ -1,14 +1,14 @@
-import { PacienteRepository } from "@/database/repositories/PatientRepository";
+import { PacienteRepository } from "@/database/repositories/PacienteRepository";
 import { useToast } from "@/hooks/useToast";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type PacienteBusca = {
-  id: number;
+  id: string;
   nome_completo: string;
   cpf: string;
   data_nascimento: string;
-  sexo: "masculino" | "feminino" | "outro";
+  sexo: "masculino" | "feminino" | "outro" | string;
   escolaridade_nome: string | null;
   ultima_avaliacao: string | null;
 };

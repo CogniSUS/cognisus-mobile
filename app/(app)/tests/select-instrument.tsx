@@ -1,7 +1,7 @@
 import { InstrumentItem } from "@/components/ui/instrument-item";
 import { PatientCard } from "@/components/ui/patient-card";
 import { TestConfirmationModal } from "@/components/ui/test-confirmation-modal";
-import { getAllInstruments } from "@/database/repositories/instrumentRepository";
+import { InstrumentoAvaliacaoRepository } from "@/database/repositories/InstrumentoAvaliacaoRepository";
 import { Instrument } from "@/types/instrument";
 import { Patient } from "@/types/patient";
 import { useFocusEffect } from "@react-navigation/native";
@@ -44,12 +44,12 @@ export default function TestSelectInstrumentPage() {
 
   const selectedPatient = useMemo<Patient>(() => {
     return {
-      id: Number(params.patientId || 0),
+      id: params.patientId || "", // <-- Removido o Number()
       nome_completo: params.nome || "Paciente não informado",
       cpf: params.cpf || "",
       data_nascimento: params.dataNascimento || "",
       sexo: normalizeSexo(params.sexo),
-      escolaridade: Number(params.escolaridade || 0),
+      escolaridade: params.escolaridade || "", // <-- Removido o Number()
     };
   }, [params]);
 
@@ -62,7 +62,8 @@ export default function TestSelectInstrumentPage() {
   async function loadInstruments() {
     try {
       setLoading(true);
-      const data = await getAllInstruments();
+      // Utilizando o método listarAtivos do novo repositório ORM
+      const data = await InstrumentoAvaliacaoRepository.listarAtivos();
       setInstruments(data);
     } catch (error) {
       console.error("Erro ao carregar instrumentos:", error);
@@ -234,9 +235,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  outlineButtonText: {
-    color: "#A824EE",
-    fontSize: 14,
-    fontWeight: "500",
-  },
+  outlineButtonText: { color: "#A824EE", fontSize: 14, fontWeight: "500" },
 });

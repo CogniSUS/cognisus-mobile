@@ -12,9 +12,7 @@ export function useAvaliacaoResult(id: string) {
     async function fetchResultado() {
       try {
         setLoading(true);
-        const data = await AvaliacaoTestMeemRepository.buscarAvaliacaoPorId(
-          Number(id),
-        );
+        const data = await AvaliacaoTestMeemRepository.buscarAvaliacaoPorId(id);
         setResultado(data);
       } catch (error) {
         console.error("Erro ao carregar resultado da avaliação:", error);

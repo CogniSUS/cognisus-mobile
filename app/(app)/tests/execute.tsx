@@ -3,10 +3,13 @@ import { TestHeader } from "@/components/ui/test-header";
 import { TestInstruction } from "@/components/ui/test-instruction";
 import { TimerCard } from "@/components/ui/time-card";
 import { meemSteps } from "@/constants/meem";
-import { getDB } from "@/database/database";
+import { database } from "@/database/database";
+import { AvaliacaoTesteMeem } from "@/database/models/AvaliacaoTesteMeem";
+import { Paciente } from "@/database/models/Paciente";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/providers/AuthProvider";
 import { Feather } from "@expo/vector-icons";
+import { Q } from "@nozbe/watermelondb";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -17,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { InstrumentoAvaliacao } from "../../../database/models/InstrumentoAvaliacao";
 
 export default function TestExecutePage() {
   const CLASSIFICAO_NORMAL = "Normal";
@@ -47,32 +51,36 @@ export default function TestExecutePage() {
     async function carregarContextoDoTeste() {
       try {
         setLoadingDados(true);
-        const db = await getDB();
 
-        // 1. Buscamos nome_completo e escolaridade da tabela paciente
-        const paciente = await db.getFirstAsync<{
-          nome_completo: string;
-          escolaridade: string;
-        }>(
-          `SELECT p.nome_completo, e.tipo as escolaridade 
-          FROM paciente p
-          LEFT JOIN escolaridade e ON p.escolaridade = e.id 
-          WHERE p.id = ? LIMIT 1`,
-          [Number(params.patientId)],
+        const pacienteCollection =
+          database.collections.get<Paciente>("paciente");
+        const instrumentoCollection =
+          database.collections.get<InstrumentoAvaliacao>(
+            "instrumento_avaliacao",
+          );
+
+        // 1. Busca os registros diretamente pelo ID (agora em formato string)
+        const paciente = await pacienteCollection.find(params.patientId);
+        const instrumento = await instrumentoCollection.find(
+          params.instrumentId,
         );
 
-        const instrumento = await db.getFirstAsync<{ nome: string }>(
-          "SELECT nome FROM instrumento_avaliacao WHERE id = ? LIMIT 1",
-          [Number(params.instrumentId)],
-        );
-
-        if (paciente) {
-          setPatientName(paciente.nome_completo);
-          setPatientEscolaridade(paciente.escolaridade || "Analfabeto");
+        // 2. Resolve a escolaridade através do relacionamento
+        let escolaridadeNome = "Analfabeto";
+        if (paciente.nivelEscolaridade) {
+          try {
+            const esc = await paciente.nivelEscolaridade.fetch();
+            if (esc) escolaridadeNome = esc.tipo;
+          } catch (e) {
+            console.warn("Escolaridade não encontrada, usando padrão.");
+          }
         }
-        if (instrumento) setInstrumentName(instrumento.nome);
+
+        setPatientName(paciente.nomeCompleto);
+        setPatientEscolaridade(escolaridadeNome);
+        setInstrumentName(instrumento.nome);
       } catch (error) {
-        console.error("Erro ao buscar dados do teste no SQLite:", error);
+        console.error("Erro ao buscar dados do teste no WatermelonDB:", error);
       } finally {
         setLoadingDados(false);
       }
@@ -120,7 +128,7 @@ export default function TestExecutePage() {
     escolaridade: string,
   ): string => {
     const esc = escolaridade.toLowerCase().trim();
-    let notaCorte = 20; // Default (analfabeto)
+    let notaCorte = 20;
 
     switch (esc) {
       case "analfabeto":
@@ -149,9 +157,6 @@ export default function TestExecutePage() {
     try {
       setLoadingDados(true);
 
-      const db = await getDB();
-
-      // 1. Inicializamos os scores por domínios
       const scores = {
         orientacao_temporal: 0,
         orientacao_espacial: 0,
@@ -163,10 +168,8 @@ export default function TestExecutePage() {
         total: 0,
       };
 
-      // 2. Extraímos todas as perguntas mapeadas no meemSteps
       const todasAsPerguntas = meemSteps.flatMap((s) => s.questions || []);
 
-      // 3. Calculamos as pontuações correspondentes a cada domínio
       Object.entries(answers).forEach(([perguntaId, pontuacao]) => {
         const pergunta = todasAsPerguntas.find((p) => p.id === perguntaId);
         if (pergunta) {
@@ -176,71 +179,69 @@ export default function TestExecutePage() {
         }
       });
 
-      // 4. Obtemos a classificação com base na escolaridade gravada
       const classificacaoFinal = obterClassificacao(
         scores.total,
         patientEscolaridade,
       );
       const agora = new Date().toISOString();
 
-      // 5. Executamos o INSERT com todas as colunas exigidas pelo seu banco local
-      const resultadoInsert = await db.runAsync(
-        `INSERT INTO avaliacao_teste_meem (
-          created_at,
-          update_at,
-          deleted_at,
-          sync_status,
-          sync_error,
-          id_paciente,
-          id_profissional,
-          id_instrumento,
-          unidade_saude,
-          data_inicio,
-          data_fim,
-          score_orientacao_espacial,
-          score_atencao,
-          score_linguagem,
-          score_visuoespacial,
-          score_memoria_recente,
-          score_memoria_imediata,
-          score_total,
-          classificacao,
-          score_orientacao_temporal
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          agora, // created_at
-          null, // update_at
-          null, // deleted_at
-          "pending", // sync_status
-          null, // sync_error
-          Number(params.patientId), // id_paciente
-          user!.id, // id_profissional
-          Number(params.instrumentId), // id_instrumento
-          Number(params.unidadeId), // unidade_saude
-          dataInicio, // data_inicio
-          agora, // data_fim
-          scores.orientacao_espacial, // score_orientacao_espacial
-          scores.atencao, // score_atencao
-          scores.linguagem, // score_linguagem
-          scores.visuoespacial, // score_visuoespacial
-          scores.memoria_recente, // score_memoria_recente
-          scores.memoria_imediata, // score_memoria_imediata
-          scores.total, // score_total
-          classificacaoFinal, // classificacao
-          scores.orientacao_temporal, // score_orientacao_temporal
-        ],
-      );
+      let novaAvaliacaoId = "";
 
-      // 6. Alerta de sucesso e redirecionamento de tela
+      await database.write(async () => {
+        const avaliacaoCollection =
+          database.collections.get<AvaliacaoTesteMeem>("avaliacao_teste_meem");
+
+        // 1. Busca assíncrona feita ANTES do bloco create
+        const profissionais = await database.collections
+          .get("profissional")
+          .query(Q.where("user_id", user!.id))
+          .fetch();
+
+        const profissionalId =
+          profissionais.length > 0 ? profissionais[0].id : null;
+
+        // 2. Bloco create estritamente síncrono (sem async/await)
+        const novaAvaliacao = await avaliacaoCollection.create((av) => {
+          av.paciente.id = params.patientId;
+
+          if (profissionalId) {
+            av.profissional.id = profissionalId;
+          }
+
+          av.instrumento.id = params.instrumentId;
+
+          if (params.unidadeId) {
+            av.unidadeSaude.id = params.unidadeId;
+          }
+
+          av.dataInicio = dataInicio;
+          av.dataFim = agora;
+
+          av.scoreOrientacaoEspacial = scores.orientacao_espacial;
+          av.scoreAtencao = scores.atencao;
+          av.scoreLinguagem = scores.linguagem;
+          av.scoreVisuoespacial = scores.visuoespacial;
+          av.scoreMemoriaRecente = scores.memoria_recente;
+          av.scoreMemoriaImediata = scores.memoria_imediata;
+          av.scoreOrientacaoTemporal = scores.orientacao_temporal;
+          av.scoreTotal = scores.total;
+
+          av.classificacao = classificacaoFinal;
+        });
+
+        novaAvaliacaoId = novaAvaliacao.id;
+      });
+
       showSuccess("Teste finalizado e salvo com sucesso!");
+
       router.push({
         pathname: "/(app)/results/[id]",
         params: {
-          id: String(resultadoInsert.lastInsertRowId),
+          id: novaAvaliacaoId,
         },
       });
     } catch (error) {
-      console.error("Erro ao persistir avaliação no SQLite:", error);
+      console.error("Erro ao persistir avaliação no WatermelonDB:", error);
       showError("Não foi possível salvar o resultado do teste localmente.");
     } finally {
       setLoadingDados(false);

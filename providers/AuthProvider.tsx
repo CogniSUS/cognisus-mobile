@@ -1,6 +1,7 @@
-// providers/AuthProvider.tsx
-import { getDB } from "@/database/database";
+import { database } from "@/database/database";
+import { syncData } from "@/services/sync/initialSync";
 import { supabase } from "@/utils/supabase";
+import { hasUnsyncedChanges } from "@nozbe/watermelondb/sync";
 import { Session, User } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
@@ -15,9 +16,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   isLoading: true,
-  logout: function (): Promise<void> {
-    throw new Error("Function not implemented.");
-  },
+  logout: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -28,14 +27,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Busca a sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
 
-    // Fica escutando mudanças (login, logout, token expirado)
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
@@ -51,15 +48,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      const db = await getDB();
+      setIsLoading(true);
 
-      await db.execAsync(`
-        DELETE FROM profissional;
-      `);
+      // 1. A Trava de Segurança: Checa se há algo para subir
+      const dadosPendentes = await hasUnsyncedChanges({ database });
+
+      if (dadosPendentes) {
+        console.log(
+          "Dados offline detectados. Forçando sincronização antes do logout...",
+        );
+        await syncData(); // Espera o PUSH terminar!
+      }
+
+      // 2. Só depois desloga
       await supabase.auth.signOut();
+
+      // 3. E por último destrói o banco local
+      await database.write(async () => {
+        await database.unsafeResetDatabase();
+      });
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
-      throw error;
+      console.error("Erro ao tentar deslogar:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 

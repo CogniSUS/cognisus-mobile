@@ -3,10 +3,12 @@ import {
   PatientListCard,
   PatientListItem,
 } from "@/components/features/patients/patient-list-card";
-import { getDB } from "@/database/database";
+import { database } from "@/database/database";
+import { PacienteRepository } from "@/database/repositories/PacienteRepository";
 import { useToast } from "@/hooks/useToast";
 import { Patient } from "@/types/patient";
 import { Ionicons } from "@expo/vector-icons";
+import { Q } from "@nozbe/watermelondb";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -18,19 +20,8 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
 } from "react-native";
-
-type PatientRow = {
-  id: number;
-  nome_completo: string;
-  cpf: string;
-  data_nascimento: string;
-  sexo: string;
-  escolaridade: number | null;
-  ultima_avaliacao: string | null;
-  ultima_unidade: string | null;
-};
 
 function normalizeSex(value: string): Patient["sexo"] {
   const normalized = value.trim().toLowerCase();
@@ -44,19 +35,6 @@ function normalizeSex(value: string): Patient["sexo"] {
   }
 
   return "outro";
-}
-
-function mapRowToPatient(row: PatientRow): PatientListItem {
-  return {
-    id: row.id,
-    nome_completo: row.nome_completo,
-    cpf: row.cpf,
-    data_nascimento: row.data_nascimento,
-    sexo: normalizeSex(row.sexo),
-    escolaridade: row.escolaridade ?? undefined,
-    ultima_avaliacao: row.ultima_avaliacao,
-    ultima_unidade: row.ultima_unidade,
-  };
 }
 
 export default function PatientsPage() {
@@ -76,50 +54,56 @@ export default function PatientsPage() {
         setIsLoading(true);
       }
 
-      const db = await getDB();
+      // 1. Busca todos os pacientes (o repositório já filtra os deletados)
+      const todosPacientes = await PacienteRepository.listarTodos();
 
-      const rows = await db.getAllAsync<PatientRow>(
-        `
-          SELECT
-            p.id,
-            p.nome_completo,
-            p.cpf,
-            p.data_nascimento,
-            p.sexo,
-            p.escolaridade,
-
-            (
-              SELECT COALESCE(a.data_fim, a.data_inicio, a.created_at)
-              FROM avaliacao_teste_meem a
-              WHERE a.id_paciente = p.id
-                AND a.deleted_at IS NULL
-              ORDER BY datetime(
-                COALESCE(a.data_fim, a.data_inicio, a.created_at)
-              ) DESC
-              LIMIT 1
-            ) AS ultima_avaliacao,
-
-            (
-              SELECT u.nome
-              FROM avaliacao_teste_meem a
-              INNER JOIN unidade_saude u
-                ON u.id = a.unidade_saude
-              WHERE a.id_paciente = p.id
-                AND a.deleted_at IS NULL
-                AND u.deleted_at IS NULL
-              ORDER BY datetime(
-                COALESCE(a.data_fim, a.data_inicio, a.created_at)
-              ) DESC
-              LIMIT 1
-            ) AS ultima_unidade
-
-          FROM paciente p
-          WHERE p.deleted_at IS NULL
-          ORDER BY p.nome_completo COLLATE NOCASE ASC
-        `,
+      // Ordena alfabeticamente
+      const pacientesOrdenados = todosPacientes.sort((a, b) =>
+        a.nomeCompleto.localeCompare(b.nomeCompleto),
       );
 
-      setPatients(rows.map(mapRowToPatient));
+      const mappedPatients: PatientListItem[] = [];
+
+      // 2. Itera sobre os pacientes para resolver a última avaliação e unidade
+      for (const p of pacientesOrdenados) {
+        let ultimaAvaliacaoData = null;
+        let ultimaUnidadeNome = null;
+
+        try {
+          const avaliacoes = await p.avaliacoes
+            .extend(Q.sortBy("created_at", Q.desc), Q.take(1))
+            .fetch();
+
+          if (avaliacoes.length > 0) {
+            const a = avaliacoes[0];
+            ultimaAvaliacaoData =
+              a.dataFim || a.dataInicio || a.createdAt?.toISOString();
+
+            if (a.unidadeSaude) {
+              const u = await a.unidadeSaude.fetch();
+              if (u) ultimaUnidadeNome = u.nome;
+            }
+          }
+        } catch (e) {
+          console.warn(
+            `Aviso: Falha ao carregar dependências do paciente ${p.id}`,
+            e,
+          );
+        }
+
+        mappedPatients.push({
+          id: p.id,
+          nome_completo: p.nomeCompleto,
+          cpf: p.cpf,
+          data_nascimento: p.dataNascimento,
+          sexo: normalizeSex(p.sexo),
+          escolaridade: p.nivelEscolaridade?.id ?? undefined,
+          ultima_avaliacao: ultimaAvaliacaoData,
+          ultima_unidade: ultimaUnidadeNome,
+        } as unknown as PatientListItem);
+      }
+
+      setPatients(mappedPatients);
     } catch (error) {
       console.error("Erro ao carregar pacientes:", error);
       showError("Não foi possível carregar os pacientes.");
@@ -190,20 +174,12 @@ export default function PatientsPage() {
 
   async function deletePatient(patient: PatientListItem) {
     try {
-      const db = await getDB();
-      const now = new Date().toISOString();
-
-      await db.runAsync(
-        `
-          UPDATE paciente
-          SET
-            deleted_at = ?,
-            update_at = ?,
-            sync_status = ?
-          WHERE id = ?
-        `,
-        [now, now, "pending", patient.id],
-      );
+      await database.write(async () => {
+        const pacienteRecord = await database.collections
+          .get("paciente")
+          .find(String(patient.id));
+        await pacienteRecord.markAsDeleted();
+      });
 
       setPatients((currentPatients) =>
         currentPatients.filter((item) => item.id !== patient.id),
@@ -361,7 +337,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 20,
   },
-
   headerRow: {
     minHeight: 52,
     flexDirection: "row",
@@ -369,7 +344,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 18,
   },
-
   title: {
     flex: 1,
     color: "#172033",
@@ -377,7 +351,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginRight: 16,
   },
-
   addButton: {
     width: 50,
     height: 50,
@@ -388,20 +361,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#F23D9A",
     shadowColor: "#A824EE",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 7,
     elevation: 4,
   },
-
-  addButtonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.97 }],
-  },
-
+  addButtonPressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
   searchContainer: {
     height: 60,
     backgroundColor: "#FFFFFF",
@@ -414,47 +379,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ECE8F2",
     shadowColor: "#000000",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
-
-  searchInput: {
-    flex: 1,
-    height: "100%",
-    color: "#172033",
-    fontSize: 16,
-  },
-
-  listContent: {
-    paddingBottom: 26,
-  },
-
-  emptyListContent: {
-    flexGrow: 1,
-  },
-
-  separator: {
-    height: 14,
-  },
-
+  searchInput: { flex: 1, height: "100%", color: "#172033", fontSize: 16 },
+  listContent: { paddingBottom: 26 },
+  emptyListContent: { flexGrow: 1 },
+  separator: { height: 14 },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
   },
-
-  loadingText: {
-    color: "#64748B",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-
+  loadingText: { color: "#64748B", fontSize: 14, fontWeight: "500" },
   emptyContainer: {
     flex: 1,
     alignItems: "center",
@@ -462,7 +402,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingBottom: 80,
   },
-
   emptyTitle: {
     color: "#334155",
     fontSize: 18,
@@ -470,7 +409,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
     textAlign: "center",
   },
-
   emptyText: {
     color: "#64748B",
     fontSize: 14,

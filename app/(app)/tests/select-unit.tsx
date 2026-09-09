@@ -1,4 +1,4 @@
-import { getDB } from "@/database/database";
+import { database } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
@@ -26,9 +26,10 @@ export default function TestSelectUnitPage() {
     instrumentNome?: string;
   }>();
 
-  const [unidadeSaude, setUnidadeSaude] = useState<number | "">("");
+  // O ID passa a ser string (o UUID do WatermelonDB) em vez de number
+  const [unidadeSaude, setUnidadeSaude] = useState<string>("");
   const [listaUnidades, setListaUnidades] = useState<
-    { id: number; nome: string }[]
+    { id: string; nome: string }[]
   >([]);
 
   function prosseguirParaTeste() {
@@ -43,7 +44,7 @@ export default function TestSelectUnitPage() {
     router.push({
       pathname: "/tests/execute",
       params: {
-        unidadeId: String(unidadeSaude),
+        unidadeId: unidadeSaude,
         patientId: params.patientId,
         instrumentId: params.instrumentId,
       },
@@ -66,10 +67,14 @@ export default function TestSelectUnitPage() {
 
   async function carregarUnidade() {
     try {
-      const db = await getDB();
-      const dados = await db.getAllAsync<{ id: number; nome: string }>(
-        "SELECT * FROM unidade_saude",
-      );
+      const unidadesCollection = database.collections.get("unidade_saude");
+      const unidades = await unidadesCollection.query().fetch();
+
+      const dados = unidades.map((u) => ({
+        id: u.id,
+        nome: (u as any).nome,
+      }));
+
       setListaUnidades(dados);
     } catch (error) {
       console.log("Erro ao carregar unidades:", error);
