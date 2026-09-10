@@ -3,7 +3,7 @@ import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/providers/AuthProvider";
 import { calcularIdade, formatarDataBR } from "@/utils/dateHelpers";
 import { formatCpf } from "@/utils/formatters";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo } from "react";
@@ -124,7 +124,7 @@ export default function HomePage() {
                 CONFIRMAÇÃO DE IDENTIDADE
               </Text>
               <TouchableOpacity
-                style={styles.editButton}
+            
                 onPress={() =>
                   router.push({
                     pathname: "/(app)/patients/edit",
@@ -132,7 +132,7 @@ export default function HomePage() {
                   })
                 }
               >
-                <FontAwesome name="pencil" size={24} color="#ffffff" />
+                <Feather name="edit-2" size={21} color="#2563EB" />
               </TouchableOpacity>
             </View>
 
