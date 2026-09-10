@@ -15,7 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { Q } from "@nozbe/watermelondb";
 import type { Href } from "expo-router";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -54,6 +54,9 @@ export default function TestExecutePage() {
   >(null);
 
   const [dataInicio] = useState(() => new Date().toISOString());
+
+  // Ref para o ScrollView - permite scroll automático para o topo
+  const scrollRef = useRef<ScrollView>(null);
 
   const step = meemSteps[currentStep];
 
@@ -142,6 +145,11 @@ export default function TestExecutePage() {
 
     return unsubscribe;
   }, [navigation, isTestInProgress]);
+
+  // Auto-scroll para o topo quando a etapa muda
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, [currentStep]);
 
   const handleAnswer = (questionId: string, value: number) => {
     setAnswers((prev) => ({
@@ -322,6 +330,7 @@ export default function TestExecutePage() {
       />
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
