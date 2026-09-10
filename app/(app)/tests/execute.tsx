@@ -343,7 +343,10 @@ export default function TestExecutePage() {
           />
 
           {step.hasTimer && (
-            <TimerCard amountOfTime={step.amountOfTime || 60} />
+            <TimerCard
+              key={`timer-${step.id}`}
+              amountOfTime={step.amountOfTime || 60}
+            />
           )}
 
           {step.questions?.map((pergunta) => (
