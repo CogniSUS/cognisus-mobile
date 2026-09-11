@@ -106,6 +106,7 @@ export default function PatientHistoryPage() {
       params: {
         id: String(result.id),
         type: result.testAbbreviation,
+        patientId: String(patientId),
       },
     });
   }
