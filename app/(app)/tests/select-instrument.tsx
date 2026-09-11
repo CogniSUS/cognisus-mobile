@@ -1,6 +1,5 @@
 import { InstrumentItem } from "@/components/ui/instrument-item";
 import { PatientCard } from "@/components/ui/patient-card";
-import { TestConfirmationModal } from "@/components/ui/test-confirmation-modal";
 import { InstrumentoAvaliacaoRepository } from "@/database/repositories/InstrumentoAvaliacaoRepository";
 import { Instrument } from "@/types/instrument";
 import { Patient } from "@/types/patient";
@@ -29,10 +28,6 @@ export default function TestSelectInstrumentPage() {
 
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedInstrument, setSelectedInstrument] =
-    useState<Instrument | null>(null);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [isConfirming, setIsConfirming] = useState(false);
 
   function normalizeSexo(value?: string): SexoPaciente {
     if (value === "masculino" || value === "feminino" || value === "outro") {
@@ -44,12 +39,12 @@ export default function TestSelectInstrumentPage() {
 
   const selectedPatient = useMemo<Patient>(() => {
     return {
-      id: params.patientId || "", // <-- Removido o Number()
+      id: params.patientId || "",
       nome_completo: params.nome || "Paciente não informado",
       cpf: params.cpf || "",
       data_nascimento: params.dataNascimento || "",
       sexo: normalizeSexo(params.sexo),
-      escolaridade: params.escolaridade || "", // <-- Removido o Number()
+      escolaridade: params.escolaridade || "",
     };
   }, [params]);
 
@@ -62,7 +57,6 @@ export default function TestSelectInstrumentPage() {
   async function loadInstruments() {
     try {
       setLoading(true);
-      // Utilizando o método listarAtivos do novo repositório ORM
       const data = await InstrumentoAvaliacaoRepository.listarAtivos();
       setInstruments(data);
     } catch (error) {
@@ -73,15 +67,7 @@ export default function TestSelectInstrumentPage() {
   }
 
   function handleSelectInstrument(instrument: Instrument) {
-    setSelectedInstrument(instrument);
-    setShowConfirmation(true);
-  }
-
-  async function handleConfirm() {
-    if (!selectedInstrument) return;
-
-    setIsConfirming(true);
-
+    // Redireciona diretamente para a seleção de unidade
     router.push({
       pathname: "/tests/select-unit",
       params: {
@@ -91,19 +77,10 @@ export default function TestSelectInstrumentPage() {
         dataNascimento: selectedPatient.data_nascimento,
         sexo: selectedPatient.sexo,
         escolaridade: String(selectedPatient.escolaridade),
-        instrumentId: String(selectedInstrument.id),
-        instrumentNome: selectedInstrument.nome,
+        instrumentId: String(instrument.id),
+        instrumentNome: instrument.nome,
       },
     });
-
-    setShowConfirmation(false);
-    setSelectedInstrument(null);
-    setIsConfirming(false);
-  }
-
-  function handleCancel() {
-    setShowConfirmation(false);
-    setSelectedInstrument(null);
   }
 
   function handleBackToHome() {
@@ -159,17 +136,6 @@ export default function TestSelectInstrumentPage() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {selectedInstrument && (
-        <TestConfirmationModal
-          visible={showConfirmation}
-          patient={selectedPatient}
-          instrument={selectedInstrument}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-          isLoading={isConfirming}
-        />
-      )}
     </View>
   );
 }

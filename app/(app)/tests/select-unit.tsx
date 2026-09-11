@@ -1,11 +1,15 @@
+// app/tests/select-unit.tsx
 import { database } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
-import { FontAwesome5 } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker";
+import { capitalizarNome } from "@/utils/formatters";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -26,7 +30,6 @@ export default function TestSelectUnitPage() {
     instrumentNome?: string;
   }>();
 
-  // O ID passa a ser string (o UUID do WatermelonDB) em vez de number
   const [unidadeSaude, setUnidadeSaude] = useState<string>("");
   const [listaUnidades, setListaUnidades] = useState<
     { id: string; nome: string }[]
@@ -41,6 +44,7 @@ export default function TestSelectUnitPage() {
       `Teste "${params.instrumentNome || "selecionado"}" confirmado para ${params.nome || "o paciente"}.`,
     );
 
+    // Usa push normalmente para empilhar a rota de execução
     router.push({
       pathname: "/tests/execute",
       params: {
@@ -51,18 +55,9 @@ export default function TestSelectUnitPage() {
     });
   }
 
-  function voltarParaSelecao() {
-    router.replace({
-      pathname: "/tests/select-instrument",
-      params: {
-        patientId: params.patientId,
-        nome: params.nome,
-        cpf: params.cpf,
-        dataNascimento: params.dataNascimento,
-        sexo: params.sexo,
-        escolaridade: params.escolaridade,
-      },
-    });
+  function fecharModal() {
+    // router.back() fechará a tela "transparente", revelando a tela anterior sem recarregá-la
+    router.back();
   }
 
   async function carregarUnidade() {
@@ -72,7 +67,8 @@ export default function TestSelectUnitPage() {
 
       const dados = unidades.map((u) => ({
         id: u.id,
-        nome: (u as any).nome,
+        // Aplica a formatação aqui
+        nome: capitalizarNome((u as any).nome),
       }));
 
       setListaUnidades(dados);
@@ -86,126 +82,165 @@ export default function TestSelectUnitPage() {
   }, []);
 
   return (
-    <View style={style.container}>
-      <View style={style.boxMid}>
-        <Text style={style.primarytext}>
-          Confirmação de Local de Atendimento
-        </Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.overlay}
+    >
+      {/* Área clicável escura para fechar o modal/voltar */}
+      <Pressable style={styles.backdrop} onPress={fecharModal} />
 
-        <Text style={style.secondarytext}>
-          Por favor, confirme em qual unidade o teste será realizado.
-        </Text>
-
-        <View style={style.boxInput}>
-          <Picker
-            selectedValue={unidadeSaude}
-            onValueChange={(itemValue) => setUnidadeSaude(itemValue)}
-            style={style.picker}
+      {/* Bottom Sheet Branco */}
+      <View style={styles.sheet}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Selecione a Unidade de Saúde</Text>
+          <TouchableOpacity
+            onPress={fecharModal}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Picker.Item label="Selecione uma unidade" value="" />
-
-            {listaUnidades.map((item) => (
-              <Picker.Item key={item.id} label={item.nome} value={item.id} />
-            ))}
-          </Picker>
-
-          <FontAwesome5 style={style.icons} name="hospital" size={24} />
-        </View>
-
-        <View style={style.boxBotton}>
-          <TouchableOpacity style={style.button} onPress={prosseguirParaTeste}>
-            <Text style={style.textButton}>Prosseguir para o teste</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={voltarParaSelecao}>
-            <Text style={style.secondaryButton}>
-              voltar para a seleção do teste
-            </Text>
+            <Ionicons name="close" size={24} color="#94A3B8" />
           </TouchableOpacity>
         </View>
+
+        <Text style={styles.subtitle}>
+          Em qual unidade este teste está sendo aplicado?
+        </Text>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContainer}
+        >
+          {listaUnidades.map((item) => {
+            const isSelected = unidadeSaude === item.id;
+
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.unitCard, isSelected && styles.unitCardSelected]}
+                onPress={() => setUnidadeSaude(item.id)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.unitCardContent}>
+                  <Ionicons
+                    name="business-outline"
+                    size={20}
+                    color={isSelected ? "#A824EE" : "#9CA3AF"}
+                  />
+                  <Text
+                    style={[
+                      styles.unitCardText,
+                      isSelected && styles.unitCardTextSelected,
+                    ]}
+                  >
+                    {item.nome}
+                  </Text>
+                </View>
+
+                {isSelected && (
+                  <Ionicons name="checkmark" size={24} color="#A824EE" />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        <TouchableOpacity
+          style={[styles.primaryButton, !unidadeSaude && styles.buttonDisabled]}
+          onPress={prosseguirParaTeste}
+          disabled={!unidadeSaude}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.primaryButtonText}>Iniciar Teste</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
-const style = StyleSheet.create({
-  container: {
+const styles = StyleSheet.create({
+  overlay: {
     flex: 1,
-    backgroundColor: "#c1b6ff",
-    justifyContent: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "flex-end",
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  sheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    maxHeight: "85%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
   },
-
-  boxMid: {
-    height: Dimensions.get("window").height / 1.5,
-    width: "100%",
-    marginTop: -10,
-    backgroundColor: "#e3deff",
-    borderRadius: 20,
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
   },
-  boxInput: {
+  title: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#42526B",
+    marginBottom: 20,
+  },
+  listContainer: {
+    gap: 12,
+    paddingBottom: 16,
+  },
+  unitCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#E6E1F0",
+    borderRadius: 12,
+    paddingHorizontal: 16,
     height: 60,
-    width: "85%",
-    alignSelf: "center",
-    borderWidth: 1,
-    borderRadius: 10,
-    marginTop: 13,
-    flexDirection: "row-reverse",
-    paddingHorizontal: 10,
-    marginBottom: 10,
+    marginBottom: 12, // fallback se gap não for suportado em versões muito antigas
   },
-  boxBotton: {
-    height: 50,
-    width: "100%",
-    alignSelf: "center",
-    borderRadius: 10,
-    marginTop: 10,
+  unitCardSelected: {
+    borderColor: "#A824EE",
+    backgroundColor: "#F8F6FC",
   },
-  button: {
-    height: 50,
-    width: "85%",
-    marginTop: 10,
-    alignSelf: "center",
-    justifyContent: "center",
-    backgroundColor: "#732cad",
-    borderRadius: 20,
-    marginBottom: 10,
+  unitCardContent: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  secondaryButton: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#4d62da",
-    alignSelf: "center",
-    marginTop: 20,
-  },
-  textButton: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#ffffff",
-    alignSelf: "center",
-    justifyContent: "center",
-  },
-  primarytext: {
-    fontSize: 20,
-    fontWeight: "bold",
-    alignSelf: "center",
-    justifyContent: "center",
-    marginBottom: 15,
-    marginTop: 20,
-    marginLeft: 10,
-  },
-  secondarytext: {
+  unitCardText: {
     fontSize: 16,
-    alignSelf: "center",
+    color: "#1F2937",
+    marginLeft: 12,
+  },
+  unitCardTextSelected: {
+    color: "#A824EE",
+    fontWeight: "600",
+  },
+  primaryButton: {
+    height: 56,
+    backgroundColor: "#A824EE",
+    borderRadius: 12,
     justifyContent: "center",
-    marginLeft: 10,
-    marginBottom: 15,
+    alignItems: "center",
+    marginTop: 8,
   },
-  icons: {
-    marginTop: 11,
-    marginLeft: 5,
+  buttonDisabled: {
+    opacity: 0.5,
   },
-  picker: {
-    flex: 1,
+  primaryButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

@@ -8,7 +8,12 @@ export function formatCpf(value: string) {
 }
 
 export function formatarData(data: string) {
-  const [ano, mes, dia] = data.split("-");
+  if (!data) return "";
+
+  // O split("T")[0] garante que pegaremos apenas a parte "YYYY-MM-DD", descartando o horário
+  const apenasData = data.split("T")[0];
+  const [ano, mes, dia] = apenasData.split("-");
+
   return `${dia}/${mes}/${ano}`;
 }
 
@@ -27,4 +32,23 @@ export function calcularIdade(data: string) {
   }
 
   return idade;
+}
+
+export function capitalizarNome(nome: string): string {
+  if (!nome) return "";
+
+  const preposicoes = ["de", "da", "do", "das", "dos", "e", "em", "na", "no"];
+
+  return nome
+    .toLowerCase()
+    .split(" ")
+    .map((palavra, index) => {
+      // Se for preposição e não for a primeira palavra, mantém minúsculo
+      if (index !== 0 && preposicoes.includes(palavra)) {
+        return palavra;
+      }
+      // Capitaliza a primeira letra da palavra
+      return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+    })
+    .join(" ");
 }
