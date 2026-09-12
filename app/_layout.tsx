@@ -1,5 +1,6 @@
 import { database } from "@/database/database";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
+import { TestProtectionProvider } from "@/providers/TestProtectionProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
 import { syncData } from "@/services/sync/initialSync";
 import { Q } from "@nozbe/watermelondb";
@@ -96,9 +97,11 @@ function RootLayoutNav() {
 export default function AppLayout() {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <RootLayoutNav />
-      </ToastProvider>
+      <TestProtectionProvider>
+        <ToastProvider>
+          <RootLayoutNav />
+        </ToastProvider>
+      </TestProtectionProvider>
     </AuthProvider>
   );
 }
