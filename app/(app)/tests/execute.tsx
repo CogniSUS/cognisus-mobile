@@ -238,6 +238,7 @@ export default function TestExecutePage() {
         pathname: "/(app)/results/[id]",
         params: {
           id: novaAvaliacaoId,
+          patientId: params.patientId,
         },
       });
     } catch (error) {

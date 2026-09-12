@@ -16,10 +16,14 @@ import {
 
 export default function ResultsDetailsPage() {
   const CLASSIFICAO_NORMAL = "Normal";
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id,patientId } = useLocalSearchParams<{ 
+    id: string; 
+    patientId: string; 
+  }>();
   const router = useRouter();
   const { resultado, loading } = useAvaliacaoResult(id);
   const { user } = useAuth();
+  
 
   if (loading) {
     return (
@@ -183,7 +187,12 @@ export default function ResultsDetailsPage() {
 
         <TouchableOpacity
           style={styles.btnOutlineResults}
-          onPress={() => router.push("/(app)/results")}
+          onPress={() => router.push({
+                  pathname: "/results/history",
+                  params: {
+                    patientId: String(patientId),
+                  },
+                }) }
         >
           <Text style={styles.btnOutlineText}>Ver Todos os Resultados</Text>
         </TouchableOpacity>
