@@ -1,5 +1,6 @@
 import { database } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
+import { capitalizarNome } from "@/utils/formatters";
 import {
   AntDesign,
   Feather,
@@ -279,7 +280,7 @@ export default function PatientEditPage() {
             {listaEscolaridade.map((item) => (
               <Picker.Item
                 key={item.id}
-                label={item.tipo}
+                label={capitalizarNome(item.tipo)}
                 value={item.id}
                 color="#0f0f0f"
               />
@@ -360,7 +361,7 @@ export default function PatientEditPage() {
                     <Ionicons
                       name={isSelected ? "checkbox" : "square-outline"}
                       size={24}
-                      color={isSelected ? "#2563EB" : "#64748B"}
+                      color={isSelected ? "#A824EE" : "#64748B"}
                     />
                     <Text
                       style={[
@@ -368,7 +369,7 @@ export default function PatientEditPage() {
                         isSelected && styles.checkboxLabelSelected,
                       ]}
                     >
-                      {item.tipo}
+                      {capitalizarNome(item.tipo)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
   tertiaryButton: { flex: 1, backgroundColor: "#732cad" },
   cancelButtonText: { fontSize: 16, fontWeight: "700", color: "#732cad" },
   tertiaryButtonText: { fontSize: 16, fontWeight: "700", color: "#ffffff" },
-  primaryButton: { backgroundColor: "#2563EB" },
+  primaryButton: { backgroundColor: "#A824EE" },
   primaryButtonText: {
     color: "#FFFFFF",
     textAlign: "center",
@@ -491,5 +492,5 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   checkboxLabel: { marginLeft: 12, fontSize: 16, color: "#334155" },
-  checkboxLabelSelected: { color: "#2563EB", fontWeight: "600" },
+  checkboxLabelSelected: { color: "#A824EE", fontWeight: "600" },
 });
