@@ -1,4 +1,5 @@
 import { QuestionCard } from "@/components/ui/question-card";
+import { TestAbandonModal } from "@/components/ui/test-abandon-modal";
 import { TestHeader } from "@/components/ui/test-header";
 import { TestInstruction } from "@/components/ui/test-instruction";
 import { TimerCard } from "@/components/ui/time-card";
@@ -6,12 +7,15 @@ import { meemSteps } from "@/constants/meem";
 import { database } from "@/database/database";
 import { AvaliacaoTesteMeem } from "@/database/models/AvaliacaoTesteMeem";
 import { Paciente } from "@/database/models/Paciente";
+import { useProtectTestNavigation } from "@/hooks/useProtectTestNavigation";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/providers/AuthProvider";
+import { useTestProtection } from "@/providers/TestProtectionProvider";
 import { Feather } from "@expo/vector-icons";
 import { Q } from "@nozbe/watermelondb";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import type { Href } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -27,7 +31,9 @@ export default function TestExecutePage() {
   const CLASSIFICAO_DEFICIT = "Possível Déficit Cognitivo";
   const { user } = useAuth();
   const router = useRouter();
+  const navigation = useNavigation();
   const { info: showInfo, success: showSuccess, error: showError } = useToast();
+  const { setOnMenuNavigationAttempt, isTestInProgress } = useTestProtection();
 
   const params = useLocalSearchParams<{
     patientId: string;
@@ -42,8 +48,15 @@ export default function TestExecutePage() {
   const [patientEscolaridade, setPatientEscolaridade] = useState("");
   const [instrumentName, setInstrumentName] = useState("");
   const [loadingDados, setLoadingDados] = useState(true);
+  const [showAbandonModal, setShowAbandonModal] = useState(false);
+  const [pendingNavigationRoute, setPendingNavigationRoute] = useState<
+    string | null
+  >(null);
 
   const [dataInicio] = useState(() => new Date().toISOString());
+
+  // Ref para o ScrollView - permite scroll automático para o topo
+  const scrollRef = useRef<ScrollView>(null);
 
   const step = meemSteps[currentStep];
 
@@ -71,7 +84,7 @@ export default function TestExecutePage() {
           try {
             const esc = await paciente.nivelEscolaridade.fetch();
             if (esc) escolaridadeNome = esc.tipo;
-          } catch (e) {
+          } catch {
             console.warn("Escolaridade não encontrada, usando padrão.");
           }
         }
@@ -90,6 +103,53 @@ export default function TestExecutePage() {
       carregarContextoDoTeste();
     }
   }, [params.patientId, params.instrumentId]);
+
+  // Proteção contra saída acidental do teste
+  useProtectTestNavigation({
+    isActive: !loadingDados,
+    patientName: patientName || "Carregando...",
+    instrumentName: instrumentName || "Carregando...",
+    currentStep: currentStep + 1,
+    totalSteps: meemSteps.length,
+  });
+
+  // Registra callback para interceptar navegação do menu
+  useEffect(() => {
+    setOnMenuNavigationAttempt(() => (route: string) => {
+      setPendingNavigationRoute(route);
+      setShowAbandonModal(true);
+    });
+
+    // Cleanup ao desmontar
+    return () => {
+      setOnMenuNavigationAttempt(undefined);
+    };
+  }, [setOnMenuNavigationAttempt]);
+
+  // Proteção contra botão "back" nativo do Android e gestos do iOS
+  useEffect(() => {
+    const unsubscribe = navigation.addListener(
+      "beforeRemove" as any,
+      (e: any) => {
+        // Se teste não está em progresso, permite navegação normal
+        if (!isTestInProgress) {
+          return;
+        }
+
+        // Se teste está em progresso, previne a navegação e mostra o modal
+        e.preventDefault();
+        setPendingNavigationRoute(null); // Indica que veio do back button
+        setShowAbandonModal(true);
+      },
+    );
+
+    return unsubscribe;
+  }, [navigation, isTestInProgress]);
+
+  // Auto-scroll para o topo quando a etapa muda
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, [currentStep]);
 
   const handleAnswer = (questionId: string, value: number) => {
     setAnswers((prev) => ({
@@ -271,6 +331,7 @@ export default function TestExecutePage() {
       />
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -283,7 +344,10 @@ export default function TestExecutePage() {
           />
 
           {step.hasTimer && (
-            <TimerCard amountOfTime={step.amountOfTime || 60} />
+            <TimerCard
+              key={`timer-${step.id}`}
+              amountOfTime={step.amountOfTime || 60}
+            />
           )}
 
           {step.questions?.map((pergunta) => (
@@ -330,6 +394,28 @@ export default function TestExecutePage() {
           />
         </TouchableOpacity>
       </View>
+
+      <TestAbandonModal
+        visible={showAbandonModal}
+        patientName={patientName}
+        instrumentName={instrumentName}
+        currentStep={currentStep + 1}
+        totalSteps={meemSteps.length}
+        onConfirmAbandon={() => {
+          setShowAbandonModal(false);
+          if (pendingNavigationRoute) {
+            // Navegação para rota específica (via menu)
+            router.push(pendingNavigationRoute as Href);
+          } else {
+            // Navegação via back button nativo (volta para tela anterior)
+            router.back();
+          }
+        }}
+        onCancel={() => {
+          setShowAbandonModal(false);
+          setPendingNavigationRoute(null);
+        }}
+      />
     </View>
   );
 }

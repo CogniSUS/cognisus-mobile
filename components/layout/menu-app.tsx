@@ -1,28 +1,48 @@
+import { useTestProtection } from "@/providers/TestProtectionProvider";
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+type ValidRoute =
+  | "/(app)"
+  | "/(app)/patients"
+  | "/(app)/results"
+  | "/(app)/informations";
+
 export function MenuApp() {
   const pathname = usePathname();
+  const { isTestInProgress, onMenuNavigationAttempt } = useTestProtection();
 
   const isActive = (route: string) => pathname === route;
+
+  const handleNavigation = (route: ValidRoute) => {
+    // Se teste está em progresso, chama callback de interceptação
+    if (isTestInProgress && onMenuNavigationAttempt) {
+      onMenuNavigationAttempt(route);
+      return;
+    }
+    // Caso contrário, navega normalmente
+    router.push(route);
+  };
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.container}>
         <Pressable
-          style={[styles.item, isActive("/") && styles.activeItem]}
-          onPress={() => router.push("/")}
+          style={[styles.item, isActive("/(app)") && styles.activeItem]}
+          onPress={() => handleNavigation("/(app)")}
         >
           <Ionicons name="home-outline" size={30} color="#B7A5D9" />
-          <Text style={[styles.label, isActive("/") && styles.activeLabel]}>
+          <Text
+            style={[styles.label, isActive("/(app)") && styles.activeLabel]}
+          >
             Início
           </Text>
         </Pressable>
 
         <Pressable
           style={[styles.item, isActive("/patients") && styles.activeItem]}
-          onPress={() => router.push("/patients")}
+          onPress={() => handleNavigation("/(app)/patients")}
         >
           <Ionicons name="people-outline" size={30} color="#B7A5D9" />
           <Text
@@ -34,7 +54,7 @@ export function MenuApp() {
 
         <Pressable
           style={[styles.item, isActive("/results") && styles.activeItem]}
-          onPress={() => router.push("/results")}
+          onPress={() => handleNavigation("/(app)/results")}
         >
           <Ionicons name="clipboard-outline" size={30} color="#B7A5D9" />
           <Text
@@ -46,7 +66,7 @@ export function MenuApp() {
 
         <Pressable
           style={[styles.item, isActive("/informations") && styles.activeItem]}
-          onPress={() => router.push("/informations")}
+          onPress={() => handleNavigation("/(app)/informations")}
         >
           <Ionicons
             name="information-circle-outline"
@@ -54,7 +74,10 @@ export function MenuApp() {
             color="#B7A5D9"
           />
           <Text
-            style={[styles.label, isActive("/informations") && styles.activeLabel]}
+            style={[
+              styles.label,
+              isActive("/informations") && styles.activeLabel,
+            ]}
           >
             Informações
           </Text>
