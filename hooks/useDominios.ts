@@ -15,7 +15,16 @@ export function useDominios() {
       try {
         const escolaridades = await EscolaridadeRepository.listarTodos();
         const dcnts = await DcntRepository.listarTodos();
-        setListaEscolaridade(escolaridades);
+        // 1. Clona e ordena o array, forçando "Analfabeto" para o topo
+        const escolaridadesOrdenadas = [...escolaridades].sort((a, b) => {
+          if (a.tipo.toLowerCase().includes("analfabeto")) return -1;
+          if (b.tipo.toLowerCase().includes("analfabeto")) return 1;
+
+          return 0;
+        });
+
+        // 2. Salva o array ordenado no estado
+        setListaEscolaridade(escolaridadesOrdenadas);
         setListaDCNT(dcnts);
       } catch (error) {
         console.error("Erro ao carregar domínios", error);

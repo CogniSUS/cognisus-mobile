@@ -103,6 +103,7 @@ export const schema = appSchema({
         { name: "score_total", type: "number" },
         { name: "classificacao", type: "string" },
         { name: "score_orientacao_temporal", type: "number" },
+        { name: "justificativa_alteracao", type: "string", isOptional: true },
         { name: "created_at", type: "number" },
         { name: "updated_at", type: "number" },
         { name: "deleted_at", type: "number", isOptional: true },

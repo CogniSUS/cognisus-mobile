@@ -15,6 +15,7 @@ export class AvaliacaoTesteMeem extends Model {
   @field("score_memoria_imediata") scoreMemoriaImediata!: number;
   @field("score_orientacao_temporal") scoreOrientacaoTemporal!: number;
   @field("score_total") scoreTotal!: number;
+  @text("justificativa_alteracao") justificativaAlteracao!: string | null;
 
   @text("classificacao") classificacao!: string;
 

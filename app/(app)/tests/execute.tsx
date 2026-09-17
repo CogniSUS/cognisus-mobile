@@ -11,24 +11,32 @@ import { useProtectTestNavigation } from "@/hooks/useProtectTestNavigation";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/providers/AuthProvider";
 import { useTestProtection } from "@/providers/TestProtectionProvider";
-import { Feather } from "@expo/vector-icons";
+import {
+  calcularNotaDeCorteMeem,
+  CLASSIFICACAO_DEFICIT,
+  CLASSIFICACAO_NORMAL,
+  obterClassificacaoMeem,
+} from "@/utils/meemHelpers";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { Q } from "@nozbe/watermelondb";
+import { Picker } from "@react-native-picker/picker";
 import type { Href } from "expo-router";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { InstrumentoAvaliacao } from "../../../database/models/InstrumentoAvaliacao";
 
 export default function TestExecutePage() {
-  const CLASSIFICAO_NORMAL = "Normal";
-  const CLASSIFICAO_DEFICIT = "Possível Déficit Cognitivo";
   const { user } = useAuth();
   const router = useRouter();
   const navigation = useNavigation();
@@ -53,18 +61,21 @@ export default function TestExecutePage() {
     string | null
   >(null);
 
+  // Estados da Etapa de Revisão (Human-in-the-loop)
+  const [isReviewStep, setIsReviewStep] = useState(false);
+  const [isOverride, setIsOverride] = useState(false);
+  const [manualClassification, setManualClassification] =
+    useState(CLASSIFICACAO_NORMAL);
+  const [justificativa, setJustificativa] = useState("");
+
   const [dataInicio] = useState(() => new Date().toISOString());
-
-  // Ref para o ScrollView - permite scroll automático para o topo
   const scrollRef = useRef<ScrollView>(null);
-
   const step = meemSteps[currentStep];
 
   useEffect(() => {
     async function carregarContextoDoTeste() {
       try {
         setLoadingDados(true);
-
         const pacienteCollection =
           database.collections.get<Paciente>("paciente");
         const instrumentoCollection =
@@ -72,13 +83,11 @@ export default function TestExecutePage() {
             "instrumento_avaliacao",
           );
 
-        // 1. Busca os registros diretamente pelo ID (agora em formato string)
         const paciente = await pacienteCollection.find(params.patientId);
         const instrumento = await instrumentoCollection.find(
           params.instrumentId,
         );
 
-        // 2. Resolve a escolaridade através do relacionamento
         let escolaridadeNome = "Analfabeto";
         if (paciente.nivelEscolaridade) {
           try {
@@ -93,7 +102,7 @@ export default function TestExecutePage() {
         setPatientEscolaridade(escolaridadeNome);
         setInstrumentName(instrumento.nome);
       } catch (error) {
-        console.error("Erro ao buscar dados do teste no WatermelonDB:", error);
+        console.error("Erro ao buscar dados do teste:", error);
       } finally {
         setLoadingDados(false);
       }
@@ -104,63 +113,52 @@ export default function TestExecutePage() {
     }
   }, [params.patientId, params.instrumentId]);
 
-  // Proteção contra saída acidental do teste
   useProtectTestNavigation({
     isActive: !loadingDados,
     patientName: patientName || "Carregando...",
     instrumentName: instrumentName || "Carregando...",
-    currentStep: currentStep + 1,
-    totalSteps: meemSteps.length,
+    currentStep: isReviewStep ? meemSteps.length + 1 : currentStep + 1,
+    totalSteps: meemSteps.length + 1,
   });
 
-  // Registra callback para interceptar navegação do menu
   useEffect(() => {
     setOnMenuNavigationAttempt(() => (route: string) => {
       setPendingNavigationRoute(route);
       setShowAbandonModal(true);
     });
-
-    // Cleanup ao desmontar
     return () => {
       setOnMenuNavigationAttempt(undefined);
     };
   }, [setOnMenuNavigationAttempt]);
 
-  // Proteção contra botão "back" nativo do Android e gestos do iOS
   useEffect(() => {
     const unsubscribe = navigation.addListener(
       "beforeRemove" as any,
       (e: any) => {
-        // Se teste não está em progresso, permite navegação normal
-        if (!isTestInProgress) {
-          return;
-        }
-
-        // Se teste está em progresso, previne a navegação e mostra o modal
+        if (!isTestInProgress) return;
         e.preventDefault();
-        setPendingNavigationRoute(null); // Indica que veio do back button
+        setPendingNavigationRoute(null);
         setShowAbandonModal(true);
       },
     );
-
     return unsubscribe;
   }, [navigation, isTestInProgress]);
 
-  // Auto-scroll para o topo quando a etapa muda
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
-  }, [currentStep]);
+  }, [currentStep, isReviewStep]);
 
   const handleAnswer = (questionId: string, value: number) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: value,
-    }));
+    setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
   const handleNext = () => {
-    const perguntasDaEtapa = step.questions || [];
+    if (isReviewStep) {
+      finalizar();
+      return;
+    }
 
+    const perguntasDaEtapa = step.questions || [];
     const temPerguntaSemResposta = perguntasDaEtapa.some(
       (pergunta) => answers[pergunta.id] === undefined,
     );
@@ -175,42 +173,32 @@ export default function TestExecutePage() {
     if (currentStep < meemSteps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
-      finalizar();
+      // Entra na etapa de revisão antes de finalizar
+      setIsReviewStep(true);
+
+      // Pré-carrega a classificação sugerida caso o usuário ative o override
+      const totalScoreTemp = Object.values(answers).reduce(
+        (acc, val) => acc + val,
+        0,
+      );
+      const classSugerida = obterClassificacaoMeem(
+        totalScoreTemp,
+        patientEscolaridade,
+      );
+      setManualClassification(
+        classSugerida === CLASSIFICACAO_NORMAL
+          ? CLASSIFICACAO_DEFICIT
+          : CLASSIFICACAO_NORMAL,
+      );
     }
   };
 
   const handlePrevious = () => {
-    if (currentStep > 0) setCurrentStep((prev) => prev - 1);
-  };
-
-  const obterClassificacao = (
-    scoreTotal: number,
-    escolaridade: string,
-  ): string => {
-    const esc = escolaridade.toLowerCase().trim();
-    let notaCorte = 20;
-
-    switch (esc) {
-      case "analfabeto":
-        notaCorte = 20;
-        break;
-      case "ensino fundamental incompleto":
-        notaCorte = 25;
-        break;
-      case "ensino fundamental completo":
-        notaCorte = 26.5;
-        break;
-      case "ensino médio":
-        notaCorte = 28;
-        break;
-      case "ensino superior":
-        notaCorte = 29;
-        break;
-      default:
-        notaCorte = 20;
+    if (isReviewStep) {
+      setIsReviewStep(false);
+    } else if (currentStep > 0) {
+      setCurrentStep((prev) => prev - 1);
     }
-
-    return scoreTotal >= notaCorte ? CLASSIFICAO_NORMAL : CLASSIFICAO_DEFICIT;
   };
 
   const finalizar = async () => {
@@ -229,7 +217,6 @@ export default function TestExecutePage() {
       };
 
       const todasAsPerguntas = meemSteps.flatMap((s) => s.questions || []);
-
       Object.entries(answers).forEach(([perguntaId, pontuacao]) => {
         const pergunta = todasAsPerguntas.find((p) => p.id === perguntaId);
         if (pergunta) {
@@ -239,44 +226,36 @@ export default function TestExecutePage() {
         }
       });
 
-      const classificacaoFinal = obterClassificacao(
+      const classificacaoSugerida = obterClassificacaoMeem(
         scores.total,
         patientEscolaridade,
       );
-      const agora = new Date().toISOString();
+      const classificacaoDefinitiva = isOverride
+        ? manualClassification
+        : classificacaoSugerida;
+      const justificativaFinal = isOverride ? justificativa.trim() : null;
 
+      const agora = new Date().toISOString();
       let novaAvaliacaoId = "";
 
       await database.write(async () => {
         const avaliacaoCollection =
           database.collections.get<AvaliacaoTesteMeem>("avaliacao_teste_meem");
-
-        // 1. Busca assíncrona feita ANTES do bloco create
         const profissionais = await database.collections
           .get("profissional")
           .query(Q.where("user_id", user!.id))
           .fetch();
-
         const profissionalId =
           profissionais.length > 0 ? profissionais[0].id : null;
 
-        // 2. Bloco create estritamente síncrono (sem async/await)
         const novaAvaliacao = await avaliacaoCollection.create((av) => {
           av.paciente.id = params.patientId;
-
-          if (profissionalId) {
-            av.profissional.id = profissionalId;
-          }
-
+          if (profissionalId) av.profissional.id = profissionalId;
           av.instrumento.id = params.instrumentId;
-
-          if (params.unidadeId) {
-            av.unidadeSaude.id = params.unidadeId;
-          }
+          if (params.unidadeId) av.unidadeSaude.id = params.unidadeId;
 
           av.dataInicio = dataInicio;
           av.dataFim = agora;
-
           av.scoreOrientacaoEspacial = scores.orientacao_espacial;
           av.scoreAtencao = scores.atencao;
           av.scoreLinguagem = scores.linguagem;
@@ -286,23 +265,20 @@ export default function TestExecutePage() {
           av.scoreOrientacaoTemporal = scores.orientacao_temporal;
           av.scoreTotal = scores.total;
 
-          av.classificacao = classificacaoFinal;
+          // Salva o veredito definitivo e a justificativa
+          av.classificacao = classificacaoDefinitiva;
+          av.justificativaAlteracao = justificativaFinal; // Requer atualização no Model AvaliacaoTesteMeem
         });
-
         novaAvaliacaoId = novaAvaliacao.id;
       });
 
       showSuccess("Teste finalizado e salvo com sucesso!");
-
       router.push({
         pathname: "/(app)/results/[id]",
-        params: {
-          id: novaAvaliacaoId,
-          patientId: params.patientId,
-        },
+        params: { id: novaAvaliacaoId, patientId: params.patientId },
       });
     } catch (error) {
-      console.error("Erro ao persistir avaliação no WatermelonDB:", error);
+      console.error("Erro ao persistir avaliação:", error);
       showError("Não foi possível salvar o resultado do teste localmente.");
     } finally {
       setLoadingDados(false);
@@ -313,21 +289,31 @@ export default function TestExecutePage() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#9D22F0" />
-        <Text style={styles.loadingText}>Preparando o teste...</Text>
+        <Text style={styles.loadingText}>Preparando...</Text>
       </View>
     );
   }
 
-  const isFirstStep = currentStep === 0;
-  const isLastStep = currentStep === meemSteps.length - 1;
+  const totalScoreAtual = Object.values(answers).reduce(
+    (acc, val) => acc + val,
+    0,
+  );
+  const notaDeCorteBase = calcularNotaDeCorteMeem(patientEscolaridade);
+  const classificacaoSugerida = obterClassificacaoMeem(
+    totalScoreAtual,
+    patientEscolaridade,
+  );
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "android" ? "height" : "padding"}
+    >
       <TestHeader
         patientName={patientName}
         instrumentName={instrumentName}
-        currentStep={currentStep + 1}
-        totalSteps={meemSteps.length}
+        currentStep={isReviewStep ? meemSteps.length + 1 : currentStep + 1}
+        totalSteps={meemSteps.length + 1}
       />
 
       <ScrollView
@@ -335,45 +321,163 @@ export default function TestExecutePage() {
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.contentArea}>
-          <Text style={styles.stepTitle}>{step.title}</Text>
-          <TestInstruction
-            instruction={step.instruction}
-            isIntro={step.isIntro}
-          />
+          {!isReviewStep ? (
+            // ==========================================
+            // FLUXO NORMAL DO TESTE
+            // ==========================================
+            <>
+              <Text style={styles.stepTitle}>{step.title}</Text>
+              <TestInstruction
+                instruction={step.instruction}
+                isIntro={step.isIntro}
+              />
+              {step.hasTimer && (
+                <TimerCard
+                  key={`timer-${step.id}`}
+                  amountOfTime={step.amountOfTime || 60}
+                />
+              )}
+              {step.questions?.map((pergunta) => (
+                <QuestionCard
+                  key={pergunta.id}
+                  question={pergunta}
+                  currentValue={answers[pergunta.id]}
+                  onAnswer={handleAnswer}
+                />
+              ))}
+            </>
+          ) : (
+            // ==========================================
+            // TELA DE REVISÃO E VEREDITO CLINICO
+            // ==========================================
+            <>
+              <Text style={styles.stepTitle}>Revisão e Veredito</Text>
+              <Text style={styles.reviewDescription}>
+                Você registrou todas as respostas. Confira a pontuação e a
+                sugestão do sistema baseada na escolaridade do paciente.
+              </Text>
 
-          {step.hasTimer && (
-            <TimerCard
-              key={`timer-${step.id}`}
-              amountOfTime={step.amountOfTime || 60}
-            />
+              <View style={styles.summaryCard}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Pontuação Total:</Text>
+                  <Text style={styles.summaryValue}>
+                    {totalScoreAtual} / 30
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>
+                    Nota de Corte (Brucki):
+                  </Text>
+                  <Text style={styles.summaryValue}>
+                    {notaDeCorteBase} pontos
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Sugestão do Sistema:</Text>
+                  <Text
+                    style={[
+                      styles.summaryValue,
+                      {
+                        color:
+                          classificacaoSugerida === CLASSIFICACAO_NORMAL
+                            ? "#16A34A"
+                            : "#DC2626",
+                      },
+                    ]}
+                  >
+                    {classificacaoSugerida}
+                  </Text>
+                </View>
+              </View>
+
+              {/* OVERRIDE CLINICO */}
+              <View style={styles.overrideSection}>
+                <TouchableOpacity
+                  style={styles.overrideToggle}
+                  onPress={() => setIsOverride(!isOverride)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={isOverride ? "checkbox" : "square-outline"}
+                    size={24}
+                    color={isOverride ? "#A824EE" : "#64748B"}
+                  />
+                  <Text style={styles.overrideToggleText}>
+                    Alterar classificação sugerida (Exceção Clínica)
+                  </Text>
+                </TouchableOpacity>
+
+                {isOverride && (
+                  <View style={styles.overrideForm}>
+                    <Text style={styles.inputLabel}>Nova Classificação:</Text>
+                    <View style={styles.pickerContainer}>
+                      <Picker
+                        selectedValue={manualClassification}
+                        onValueChange={(itemValue) =>
+                          setManualClassification(itemValue)
+                        }
+                        style={styles.picker}
+                        dropdownIconColor="#A824EE"
+                      >
+                        {/* Forçar a prop color nos items resolve o bug do tema nativo */}
+                        <Picker.Item
+                          label="Normal"
+                          value={CLASSIFICACAO_NORMAL}
+                          color="#0F172A"
+                        />
+                        <Picker.Item
+                          label="Possível Déficit Cognitivo"
+                          value={CLASSIFICACAO_DEFICIT}
+                          color="#0F172A"
+                        />
+                      </Picker>
+                    </View>
+
+                    <Text style={styles.inputLabel}>
+                      Justificativa Clínica (Opcional):
+                    </Text>
+                    <TextInput
+                      style={styles.textArea}
+                      placeholder="Ex: Paciente estava excessivamente ansioso..."
+                      placeholderTextColor="#9CA3AF"
+                      multiline={true}
+                      numberOfLines={4}
+                      value={justificativa}
+                      onChangeText={setJustificativa}
+                      textAlignVertical="top"
+                      selectionColor="#A824EE"
+                    />
+                  </View>
+                )}
+              </View>
+            </>
           )}
-
-          {step.questions?.map((pergunta) => (
-            <QuestionCard
-              key={pergunta.id}
-              question={pergunta}
-              currentValue={answers[pergunta.id]}
-              onAnswer={handleAnswer}
-            />
-          ))}
         </View>
       </ScrollView>
+
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.btnOutline, isFirstStep && styles.btnOutlineDisabled]}
+          style={[
+            styles.btnOutline,
+            !isReviewStep && currentStep === 0 && styles.btnOutlineDisabled,
+          ]}
           onPress={handlePrevious}
-          disabled={isFirstStep}
+          disabled={!isReviewStep && currentStep === 0}
           activeOpacity={0.7}
         >
           <Feather
             name="chevron-left"
             size={20}
-            color={isFirstStep ? "#D1D5DB" : "#A824EE"}
+            color={!isReviewStep && currentStep === 0 ? "#D1D5DB" : "#A824EE"}
           />
           <Text
-            style={[styles.btnOutlineText, isFirstStep && styles.textDisabled]}
+            style={[
+              styles.btnOutlineText,
+              !isReviewStep && currentStep === 0 && styles.textDisabled,
+            ]}
           >
             Anterior
           </Text>
@@ -385,10 +489,10 @@ export default function TestExecutePage() {
           activeOpacity={0.8}
         >
           <Text style={styles.btnSolidText}>
-            {isLastStep ? "Finalizar" : "Próxima"}
+            {isReviewStep ? "Salvar Avaliação" : "Próxima"}
           </Text>
           <Feather
-            name={isLastStep ? "check" : "chevron-right"}
+            name={isReviewStep ? "check" : "chevron-right"}
             size={20}
             color="#FFFFFF"
           />
@@ -399,24 +503,20 @@ export default function TestExecutePage() {
         visible={showAbandonModal}
         patientName={patientName}
         instrumentName={instrumentName}
-        currentStep={currentStep + 1}
-        totalSteps={meemSteps.length}
+        currentStep={isReviewStep ? meemSteps.length + 1 : currentStep + 1}
+        totalSteps={meemSteps.length + 1}
         onConfirmAbandon={() => {
           setShowAbandonModal(false);
-          if (pendingNavigationRoute) {
-            // Navegação para rota específica (via menu)
+          if (pendingNavigationRoute)
             router.push(pendingNavigationRoute as Href);
-          } else {
-            // Navegação via back button nativo (volta para tela anterior)
-            router.back();
-          }
+          else router.back();
         }}
         onCancel={() => {
           setShowAbandonModal(false);
           setPendingNavigationRoute(null);
         }}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -507,5 +607,89 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 16,
+  },
+  reviewDescription: {
+    fontSize: 16,
+    color: "#4B5563",
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  summaryCard: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    marginBottom: 24,
+    gap: 12,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  summaryValue: {
+    fontSize: 16,
+    color: "#0F172A",
+    fontWeight: "700",
+    flexShrink: 1,
+    textAlign: "right",
+    marginLeft: 8,
+  },
+  summaryLabel: {
+    fontSize: 15,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  overrideSection: {
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+    paddingTop: 20,
+  },
+  overrideToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  overrideToggleText: {
+    fontSize: 15,
+    color: "#334155",
+    fontWeight: "600",
+    marginLeft: 12,
+  },
+  overrideForm: {
+    backgroundColor: "#FAF5FF", // Fundo roxo bem sutil
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E9D5FF",
+    gap: 12,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: "#4B5563",
+    fontWeight: "600",
+  },
+  pickerContainer: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 12,
+    height: 50,
+    justifyContent: "center",
+  },
+  picker: {
+    width: "100%",
+  },
+  textArea: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 15,
+    color: "#0F172A",
+    minHeight: 100,
   },
 });
