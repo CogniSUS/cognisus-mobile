@@ -16,14 +16,13 @@ import {
 
 export default function ResultsDetailsPage() {
   const CLASSIFICAO_NORMAL = "Normal";
-  const { id,patientId } = useLocalSearchParams<{ 
-    id: string; 
-    patientId: string; 
+  const { id, patientId } = useLocalSearchParams<{
+    id: string;
+    patientId: string;
   }>();
   const router = useRouter();
   const { resultado, loading } = useAvaliacaoResult(id);
   const { user } = useAuth();
-  
 
   if (loading) {
     return (
@@ -122,6 +121,21 @@ export default function ResultsDetailsPage() {
           </View>
         </View>
 
+        {/* --- JUSTIFICATIVA DE ALTERAÇÃO CLÍNICA --- */}
+        {resultado.justificativa_alteracao && (
+          <View style={styles.justificationCard}>
+            <View style={styles.justificationHeader}>
+              <Feather name="edit-3" size={18} color="#732cad" />
+              <Text style={styles.justificationTitle}>
+                Justificativa da Exceção Clínica
+              </Text>
+            </View>
+            <Text style={styles.justificationText}>
+              {resultado.justificativa_alteracao}
+            </Text>
+          </View>
+        )}
+
         {/* Habilidades Específicas */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Habilidades Específicas</Text>
@@ -187,12 +201,14 @@ export default function ResultsDetailsPage() {
 
         <TouchableOpacity
           style={styles.btnOutlineResults}
-          onPress={() => router.push({
-                  pathname: "/results/history",
-                  params: {
-                    patientId: String(patientId),
-                  },
-                }) }
+          onPress={() =>
+            router.push({
+              pathname: "/results/history",
+              params: {
+                patientId: String(patientId),
+              },
+            })
+          }
         >
           <Text style={styles.btnOutlineText}>Ver Todos os Resultados</Text>
         </TouchableOpacity>
@@ -323,5 +339,35 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
+  },
+  justificationCard: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#732cad",
+    marginTop: -8,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  justificationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  justificationTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#374151",
+  },
+  justificationText: {
+    fontSize: 14,
+    color: "#4B5563",
+    lineHeight: 22,
+    fontStyle: "italic",
   },
 });

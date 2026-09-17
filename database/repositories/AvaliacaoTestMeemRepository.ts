@@ -16,6 +16,7 @@ export interface AvaliacaoResult {
   paciente_nome: string;
   instrumento_nome: string;
   unidade_nome: string;
+  justificativa_alteracao: string | null;
 }
 
 class AvaliacaoTestMeemRepositoryImpl extends BaseRepository<AvaliacaoTesteMeem> {
@@ -54,6 +55,7 @@ class AvaliacaoTestMeemRepositoryImpl extends BaseRepository<AvaliacaoTesteMeem>
         paciente_nome: paciente.nomeCompleto,
         instrumento_nome: instrumento.nome,
         unidade_nome: unidadeNome,
+        justificativa_alteracao: avaliacao.justificativaAlteracao || null,
       };
     } catch (error) {
       console.error(
