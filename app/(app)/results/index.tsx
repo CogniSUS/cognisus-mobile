@@ -3,7 +3,6 @@ import { formatCpf } from "@/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
-  Dimensions,
   StyleSheet,
   Text,
   TextInput,
@@ -14,17 +13,21 @@ import {
 export default function ResultsPage() {
   const { cpfBusca, setCpfBusca, loading, getBuscarHistorico } =
     useBuscaHistorico();
+
   return (
     <View style={styles.container}>
       <View style={styles.boxTop}>
         <Text style={styles.title}>Histórico do Paciente</Text>
+
         <Text style={styles.text}>
           Digite o CPF para acessar o histórico completo de avaliações
         </Text>
       </View>
+
       <View style={styles.boxMid}>
         <View style={styles.boxInput}>
           <Ionicons name="search-outline" size={20} color="#94A3B8" />
+
           <TextInput
             placeholder="Digite o CPF do paciente"
             placeholderTextColor="#9CA3AF"
@@ -33,11 +36,18 @@ export default function ResultsPage() {
             style={styles.input}
             maxLength={14}
             onChangeText={(text) => setCpfBusca(formatCpf(text))}
+            returnKeyType="search"
+            onSubmitEditing={getBuscarHistorico}
           />
         </View>
-        <TouchableOpacity style={styles.button} onPress={getBuscarHistorico}>
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={getBuscarHistorico}
+          disabled={loading}
+        >
           {loading ? (
-            <ActivityIndicator color={"white"} size={"small"} />
+            <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <Text style={styles.textButton}>Buscar Histórico</Text>
           )}
@@ -51,18 +61,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
   },
   boxTop: {
-    height: Dimensions.get("window").height / 4,
     width: "100%",
     alignItems: "center",
-    justifyContent: "flex-end",
   },
   boxMid: {
-    height: Dimensions.get("window").height / 3,
     width: "100%",
     alignItems: "center",
+    marginTop: 30,
   },
   title: {
     fontSize: 24,
@@ -78,37 +87,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   boxInput: {
-    height: 50,
-    width: "85%",
-    alignSelf: "center",
+    height: 52,
+    width: "100%",
     alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 10,
-    marginTop: 30,
-    borderColor: "#732cad",
+    borderWidth: 1.5,
+    borderRadius: 14,
+    borderColor: "#C77DFF",
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
+    gap: 8,
   },
   input: {
     flex: 1,
     height: "100%",
     color: "#172033",
     fontSize: 16,
-    marginLeft: 10,
   },
   button: {
-    height: 50,
-    width: "85%",
-    marginTop: 10,
-    alignSelf: "center",
-    backgroundColor: "#732cad",
-    borderRadius: 20,
+    height: 52,
+    width: "100%",
+    marginTop: 12,
+    backgroundColor: "#732CAD",
+    borderRadius: 14,
+    alignItems: "center",
     justifyContent: "center",
   },
+  buttonDisabled: {
+    opacity: 0.65,
+  },
   textButton: {
-    fontSize: 20,
-    fontWeight: "500",
-    color: "#ffffff",
-    alignSelf: "center",
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });
