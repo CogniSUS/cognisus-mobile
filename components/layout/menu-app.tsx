@@ -2,6 +2,7 @@ import { useTestProtection } from "@/providers/TestProtectionProvider";
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type ValidRoute =
   | "/(app)"
@@ -11,22 +12,29 @@ type ValidRoute =
 
 export function MenuApp() {
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   const { isTestInProgress, onMenuNavigationAttempt } = useTestProtection();
 
   const isActive = (route: string) => pathname === route;
 
   const handleNavigation = (route: ValidRoute) => {
-    // Se teste está em progresso, chama callback de interceptação
     if (isTestInProgress && onMenuNavigationAttempt) {
       onMenuNavigationAttempt(route);
       return;
     }
-    // Caso contrário, navega normalmente
+
     router.push(route);
   };
 
   return (
-    <View style={styles.wrapper}>
+    <View
+      style={[
+        styles.wrapper,
+        {
+          paddingBottom: Math.max(insets.bottom, 10),
+        },
+      ]}
+    >
       <View style={styles.container}>
         <Pressable
           style={[styles.item, isActive("/(app)") && styles.activeItem]}
@@ -93,7 +101,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E9E1F4",
     paddingTop: 8,
-    paddingBottom: 10,
     paddingHorizontal: 10,
   },
   container: {
