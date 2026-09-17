@@ -37,7 +37,18 @@ export function calcularIdade(data: string) {
 export function capitalizarNome(nome: string): string {
   if (!nome) return "";
 
-  const preposicoes = ["de", "da", "do", "das", "dos", "e", "em", "na", "no"];
+  const preposicoes = [
+    "de",
+    "da",
+    "do",
+    "das",
+    "dos",
+    "e",
+    "em",
+    "na",
+    "no",
+    "a",
+  ];
 
   return nome
     .toLowerCase()

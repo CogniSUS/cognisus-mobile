@@ -66,9 +66,22 @@ export default function PatientEditPage() {
         dcntCollection.query().fetch(),
       ]);
 
-      setListaEscolaridade(
-        escolaridades.map((e: any) => ({ id: e.id, tipo: e.tipo })),
-      );
+      // 1. Mapeia o array
+      const escolaridadesMapeadas = escolaridades.map((e: any) => ({
+        id: e.id,
+        tipo: e.tipo,
+      }));
+
+      // 2. Ordena forçando "Analfabeto" para o topo
+      escolaridadesMapeadas.sort((a, b) => {
+        if (a.tipo.toLowerCase().includes("analfabeto")) return -1;
+        if (b.tipo.toLowerCase().includes("analfabeto")) return 1;
+
+        return 0;
+      });
+
+      // 3. Salva no estado
+      setListaEscolaridade(escolaridadesMapeadas);
 
       setListaDCNT(dcnts.map((d: any) => ({ id: d.id, tipo: d.tipo })));
     } catch (error) {
