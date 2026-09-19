@@ -20,4 +20,8 @@ export type TestStep = {
   hasTimer?: boolean; // Habilita o componente de cronômetro
   amountOfTime?: number; // Define o tempo do cronômetro (em segundos)
   questions?: MeemQuestion[]; // Lista de perguntas daquela etapa
+  alternativeTitle?: string; // Ex: "Alternativa: Soletração"
+  alternativeInstruction?: string; // Ex: "Peça para soletrar M-U-N-D-O de trás para frente."
+  alternativeQuestions?: MeemQuestion[];
+  referenceImage?: any; // Caminho para a imagem de referência (ex: require('@/assets/images/pentagonos.png'))
 };
