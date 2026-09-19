@@ -2,7 +2,7 @@ import { useBuscaPaciente } from "@/hooks/useBuscaPaciente";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/providers/AuthProvider";
 import { calcularIdade, formatarDataBR } from "@/utils/dateHelpers";
-import { formatCpf } from "@/utils/formatters";
+import { capitalizarNome, formatCpf } from "@/utils/formatters";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -67,7 +67,9 @@ export default function HomePage() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <Text style={styles.greeting}>Olá, {nomeProfissional}</Text>
+      <Text style={styles.greeting}>
+        Olá, {capitalizarNome(nomeProfissional)}
+      </Text>
 
       {!pacienteEncontrado && (
         <Pressable
@@ -124,7 +126,6 @@ export default function HomePage() {
                 CONFIRMAÇÃO DE IDENTIDADE
               </Text>
               <TouchableOpacity
-            
                 onPress={() =>
                   router.push({
                     pathname: "/(app)/patients/edit",

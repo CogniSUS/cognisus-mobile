@@ -3,7 +3,6 @@ import { QuestionCard } from "@/components/ui/question-card";
 import { TestAbandonModal } from "@/components/ui/test-abandon-modal";
 import { TestHeader } from "@/components/ui/test-header";
 import { TestInstruction } from "@/components/ui/test-instruction";
-import { TimerCard } from "@/components/ui/time-card";
 import { meemSteps } from "@/constants/meem";
 import { database } from "@/database/database";
 import { AvaliacaoTesteMeem } from "@/database/models/AvaliacaoTesteMeem";
@@ -25,7 +24,9 @@ import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -71,6 +72,26 @@ export default function TestExecutePage() {
   const [dataInicio] = useState(() => new Date().toISOString());
   const scrollRef = useRef<ScrollView>(null);
   const step = meemSteps[currentStep];
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [activePaths, setActivePaths] = useState<
+    Record<string, "main" | "alt">
+  >({});
+
+  const currentPath = activePaths[step.id] || "main";
+  const activeQuestions =
+    currentPath === "alt" && step.alternativeQuestions
+      ? step.alternativeQuestions
+      : step.questions || [];
+
+  const activeInstruction =
+    currentPath === "alt" && step.alternativeInstruction
+      ? step.alternativeInstruction
+      : step.instruction;
+
+  const activeTitle =
+    currentPath === "alt" && step.alternativeTitle
+      ? step.alternativeTitle
+      : step.title;
 
   useEffect(() => {
     async function carregarContextoDoTeste() {
@@ -159,7 +180,7 @@ export default function TestExecutePage() {
     }
 
     const perguntasDaEtapa = step.questions || [];
-    const temPerguntaSemResposta = perguntasDaEtapa.some(
+    const temPerguntaSemResposta = activeQuestions.some(
       (pergunta) => answers[pergunta.id] === undefined,
     );
 
@@ -216,9 +237,17 @@ export default function TestExecutePage() {
         total: 0,
       };
 
-      const todasAsPerguntas = meemSteps.flatMap((s) => s.questions || []);
+      const todasAsPerguntasAtivas = meemSteps.flatMap((s) => {
+        const path = activePaths[s.id] || "main";
+        if (path === "alt" && s.alternativeQuestions) {
+          return s.alternativeQuestions;
+        }
+        return s.questions || [];
+      });
       Object.entries(answers).forEach(([perguntaId, pontuacao]) => {
-        const pergunta = todasAsPerguntas.find((p) => p.id === perguntaId);
+        const pergunta = todasAsPerguntasAtivas.find(
+          (p) => p.id === perguntaId,
+        );
         if (pergunta) {
           const dominio = pergunta.dominio as keyof typeof scores;
           scores[dominio] += pontuacao;
@@ -333,18 +362,68 @@ export default function TestExecutePage() {
             // FLUXO NORMAL DO TESTE
             // ==========================================
             <>
-              <Text style={styles.stepTitle}>{step.title}</Text>
+              <Text style={styles.stepTitle}>{activeTitle}</Text>
               <TestInstruction
-                instruction={step.instruction}
+                instruction={activeInstruction}
                 isIntro={step.isIntro}
               />
-              {step.hasTimer && (
-                <TimerCard
-                  key={`timer-${step.id}`}
-                  amountOfTime={step.amountOfTime || 60}
-                />
+
+              {step.alternativeQuestions && (
+                <View style={styles.toggleContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleBtn,
+                      currentPath === "main" && styles.toggleBtnActive,
+                    ]}
+                    onPress={() =>
+                      setActivePaths((prev) => ({ ...prev, [step.id]: "main" }))
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.toggleBtnText,
+                        currentPath === "main" && styles.toggleBtnTextActive,
+                      ]}
+                    >
+                      Cálculo Subtração
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleBtn,
+                      currentPath === "alt" && styles.toggleBtnActive,
+                    ]}
+                    onPress={() =>
+                      setActivePaths((prev) => ({ ...prev, [step.id]: "alt" }))
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.toggleBtnText,
+                        currentPath === "alt" && styles.toggleBtnTextActive,
+                      ]}
+                    >
+                      Soletração MUNDO
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               )}
-              {step.questions?.map((pergunta) => (
+
+              {step.referenceImage && (
+                <TouchableOpacity
+                  style={styles.showImageBtn}
+                  onPress={() => setShowImageModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="maximize-2" size={20} color="#A824EE" />
+                  <Text style={styles.showImageBtnText}>
+                    Ampliar Imagem para o Paciente
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {activeQuestions.map((pergunta) => (
                 <QuestionCard
                   key={pergunta.id}
                   question={pergunta}
@@ -509,6 +588,37 @@ export default function TestExecutePage() {
           setPendingNavigationRoute(null);
         }}
       />
+
+      {/* MODAL DE IMAGEM AMPLIADA */}
+      <Modal
+        visible={showImageModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.closeModalBtn}
+              onPress={() => setShowImageModal(false)}
+            >
+              <Feather name="x" size={28} color="#4B5563" />
+            </TouchableOpacity>
+
+            {step.referenceImage && (
+              <Image
+                source={step.referenceImage}
+                style={styles.fullscreenImage}
+                resizeMode="contain"
+              />
+            )}
+
+            <Text style={styles.modalInstructionText}>
+              Vire a tela do dispositivo para o paciente copiar o desenho.
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -673,5 +783,87 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0F172A",
     minHeight: 100,
+  },
+  toggleContainer: {
+    flexDirection: "row",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  toggleBtnActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  toggleBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  toggleBtnTextActive: {
+    color: "#A824EE",
+  },
+  showImageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3E8FF", // Roxo bem clarinho
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E9D5FF",
+    marginBottom: 20,
+    gap: 8,
+  },
+  showImageBtnText: {
+    color: "#A824EE",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  // Estilos do Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)", // Fundo escurecido
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+    position: "relative",
+  },
+  closeModalBtn: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    padding: 8,
+  },
+  fullscreenImage: {
+    width: "100%",
+    height: 250,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  modalInstructionText: {
+    fontSize: 15,
+    color: "#64748B",
+    textAlign: "center",
+    fontWeight: "500",
   },
 });
