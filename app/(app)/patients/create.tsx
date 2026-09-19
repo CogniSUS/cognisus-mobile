@@ -10,12 +10,10 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -27,8 +25,6 @@ import {
 
 export default function PatientCreatePage() {
   const params = useLocalSearchParams<{ cpfInicial?: string }>();
-
-  const [modalDcntVisivel, setModalDcntVisivel] = useState(false);
   const { listaEscolaridade, listaDCNT } = useDominios();
 
   const {
@@ -51,7 +47,7 @@ export default function PatientCreatePage() {
       pathname: "/",
       params: { cpfBuscaInicial: cpfCadastrado },
     });
-  });
+  }, listaDCNT);
 
   useEffect(() => {
     if (params.cpfInicial) {
@@ -161,28 +157,38 @@ export default function PatientCreatePage() {
             icon={<Ionicons name="school" size={24} color="#732cad" />}
           />
 
-          {/* DCNT */}
-          <TouchableOpacity
-            style={styles.boxInput}
-            onPress={() => setModalDcntVisivel(true)}
-            activeOpacity={0.7}
-          >
-            <FontAwesome name="heartbeat" size={24} color="#732cad" />
-            <View style={styles.inputPlaceholderContainer}>
-              <Text
-                style={{
-                  color: dcntsSelecionadas.length > 0 ? "#0f0f0f" : "#9CA3AF",
-                  fontSize: 16,
-                }}
-              >
-                {dcntsSelecionadas.length > 0
-                  ? `${dcntsSelecionadas.length} DCNT(s) selecionada(s)`
-                  : "DCNT referida (opcional)"}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          {/* SEÇÃO DE CONDIÇÕES DE SAÚDE (DCNT) - MOVIMENTADA PARA CIMA DOS BOTÕES */}
+          <View style={styles.healthConditionSection}>
+            <Text style={styles.healthConditionQuestion}>
+              Algum profissional de saúde já informou que você tem alguma das
+              seguintes condições de saúde?
+            </Text>
 
-          {/* BOTÕES DE AÇÃO */}
+            <View style={styles.chipsContainer}>
+              {listaDCNT.map((item) => {
+                const isSelected = dcntsSelecionadas.includes(item.id);
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.chip, isSelected && styles.chipSelected]}
+                    onPress={() => toggleDcnt(item.id, item.tipo)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        isSelected && styles.chipTextSelected,
+                      ]}
+                    >
+                      {item.tipo}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* BOTÕES DE AÇÃO - SEMPRE NO FINAL */}
           <View style={styles.boxBotton}>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
@@ -204,65 +210,6 @@ export default function PatientCreatePage() {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* --- MODAL DE SELEÇÃO MÚLTIPLA DE DCNT --- */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalDcntVisivel}
-          onRequestClose={() => setModalDcntVisivel(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Selecione as DCNTs</Text>
-
-              <FlatList
-                data={listaDCNT}
-                keyExtractor={(item) => item.id.toString()}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => {
-                  const isSelected = dcntsSelecionadas.includes(item.id);
-
-                  return (
-                    <TouchableOpacity
-                      style={[
-                        styles.checkboxContainer,
-                        isSelected && styles.checkboxSelected,
-                      ]}
-                      onPress={() => toggleDcnt(item.id)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons
-                        name={isSelected ? "checkbox" : "square-outline"}
-                        size={24}
-                        color={isSelected ? "#A824EE" : "#64748B"}
-                      />
-                      <Text
-                        style={[
-                          styles.checkboxLabel,
-                          isSelected && styles.checkboxLabelSelected,
-                        ]}
-                      >
-                        {capitalizarNome(item.tipo)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                }}
-              />
-
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  styles.primaryButton,
-                  { marginTop: 15, width: "100%" },
-                ]}
-                onPress={() => setModalDcntVisivel(false)}
-              >
-                <Text style={styles.primaryButtonText}>Concluído</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -308,16 +255,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#0f0f0f",
   },
-  inputPlaceholderContainer: {
-    flex: 1,
-    height: "100%",
-    justifyContent: "center",
-    marginLeft: 12,
+  healthConditionSection: {
+    width: "100%",
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  healthConditionQuestion: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#334155",
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  chipsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  chipSelected: {
+    backgroundColor: "#F3E8FF",
+    borderColor: "#A824EE",
+  },
+  chipText: {
+    fontSize: 14,
+    color: "#475569",
+    fontWeight: "500",
+  },
+  chipTextSelected: {
+    color: "#A824EE",
+    fontWeight: "700",
   },
   boxBotton: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 20,
+    marginTop: 10,
     gap: 12,
   },
   button: {
@@ -325,7 +304,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#A824EE",
   },
   cancelButton: {
     flex: 1,
@@ -346,56 +324,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#ffffff",
-  },
-  primaryButton: {
-    backgroundColor: "#A824EE",
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    maxHeight: "80%",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0F172A",
-    marginBottom: 15,
-    textAlign: "center",
-  },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  checkboxSelected: {
-    backgroundColor: "#EFF6FF",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    borderBottomWidth: 0,
-  },
-  checkboxLabel: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: "#334155",
-  },
-  checkboxLabelSelected: {
-    color: "#A824EE",
-    fontWeight: "600",
   },
 });

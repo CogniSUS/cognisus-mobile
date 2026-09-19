@@ -2,7 +2,10 @@ import { PacienteRepository } from "@/database/repositories/PacienteRepository";
 import { useToast } from "@/hooks/useToast";
 import { useState } from "react";
 
-export function useCadastroPaciente(onSucesso: (cpf: string) => void) {
+export function useCadastroPaciente(
+  onSucesso: (cpf: string) => void,
+  listaDCNT: { id: string; tipo: string }[],
+) {
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
@@ -22,14 +25,30 @@ export function useCadastroPaciente(onSucesso: (cpf: string) => void) {
     setDcntsSelecionadas([]);
   }
 
-  function toggleDcnt(id: string) {
+  const toggleDcnt = (dcntId: string, dcntTipo: string) => {
+    const exclusivas = ["Nenhuma dessas condições", "Não sei informar"];
+    const isSelecionadaExclusiva = exclusivas.includes(dcntTipo);
+
     setDcntsSelecionadas((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((item) => item !== id);
+      // 1. Se o usuário clicou em "Nenhuma" ou "Não sei", limpa o resto e marca apenas ela.
+      if (isSelecionadaExclusiva) {
+        return prev.includes(dcntId) ? [] : [dcntId];
       }
-      return [...prev, id];
+
+      // 2. Se clicou em uma doença normal, remove as opções exclusivas (se estiverem marcadas)
+      const prevSemExclusivas = prev.filter((id) => {
+        const dcnt = listaDCNT.find((d) => d.id === id);
+        return dcnt ? !exclusivas.includes(dcnt.tipo) : true;
+      });
+
+      // 3. Faz o toggle normal da doença
+      if (prevSemExclusivas.includes(dcntId)) {
+        return prevSemExclusivas.filter((id) => id !== dcntId);
+      } else {
+        return [...prevSemExclusivas, dcntId];
+      }
     });
-  }
+  };
 
   async function cadastrarPaciente() {
     try {

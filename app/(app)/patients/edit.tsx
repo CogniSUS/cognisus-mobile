@@ -14,8 +14,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
-  Modal,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -36,24 +36,37 @@ export default function PatientEditPage() {
   const [escolaridade, setEscolaridade] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Estados de DCNT atualizados para suportar string IDs
   const [dcntsSelecionadas, setDcntsSelecionadas] = useState<string[]>([]);
-  const [modalDcntVisivel, setModalDcntVisivel] = useState(false);
-
   const [listaEscolaridade, setListaEscolaridade] = useState<
     { id: string; tipo: string }[]
   >([]);
-
   const [listaDCNT, setListaDCNT] = useState<{ id: string; tipo: string }[]>(
     [],
   );
 
-  const toggleDcnt = (dcntId: string) => {
-    setDcntsSelecionadas((prev) =>
-      prev.includes(dcntId)
-        ? prev.filter((item) => item !== dcntId)
-        : [...prev, dcntId],
-    );
+  const toggleDcnt = (dcntId: string, dcntTipo: string) => {
+    const exclusivas = ["Nenhuma dessas condições", "Não sei informar"];
+    const isSelecionadaExclusiva = exclusivas.includes(dcntTipo);
+
+    setDcntsSelecionadas((prev) => {
+      // 1. Se clicou em "Nenhuma" ou "Não sei", limpa o resto e marca apenas ela.
+      if (isSelecionadaExclusiva) {
+        return prev.includes(dcntId) ? [] : [dcntId];
+      }
+
+      // 2. Se clicou em uma doença normal, remove as opções exclusivas (se estiverem marcadas)
+      const prevSemExclusivas = prev.filter((id) => {
+        const dcnt = listaDCNT.find((d) => d.id === id);
+        return dcnt ? !exclusivas.includes(dcnt.tipo) : true;
+      });
+
+      // 3. Faz o toggle normal da doença
+      if (prevSemExclusivas.includes(dcntId)) {
+        return prevSemExclusivas.filter((id) => id !== dcntId);
+      } else {
+        return [...prevSemExclusivas, dcntId];
+      }
+    });
   };
 
   async function carregarListasBase() {
@@ -66,23 +79,18 @@ export default function PatientEditPage() {
         dcntCollection.query().fetch(),
       ]);
 
-      // 1. Mapeia o array
       const escolaridadesMapeadas = escolaridades.map((e: any) => ({
         id: e.id,
         tipo: e.tipo,
       }));
 
-      // 2. Ordena forçando "Analfabeto" para o topo
       escolaridadesMapeadas.sort((a, b) => {
         if (a.tipo.toLowerCase().includes("analfabeto")) return -1;
         if (b.tipo.toLowerCase().includes("analfabeto")) return 1;
-
         return 0;
       });
 
-      // 3. Salva no estado
       setListaEscolaridade(escolaridadesMapeadas);
-
       setListaDCNT(dcnts.map((d: any) => ({ id: d.id, tipo: d.tipo })));
     } catch (error) {
       console.error("Erro ao carregar listas base:", error);
@@ -99,7 +107,6 @@ export default function PatientEditPage() {
       setDataNascimento(`${dia}/${mes}/${ano}`);
       setSexo(paciente.sexo);
 
-      // Resgata o ID da escolaridade se houver vínculo
       if (paciente.nivelEscolaridade) {
         setEscolaridade(paciente.nivelEscolaridade.id);
       }
@@ -109,7 +116,6 @@ export default function PatientEditPage() {
         .query(Q.where("id_paciente", pacienteId))
         .fetch();
 
-      // Mapeia os IDs das DCNTs já vinculadas via propriedade de relacionamento
       setDcntsSelecionadas(dcntsDoPaciente.map((rel: any) => rel.dcnt.id));
     } catch (error) {
       console.error("Erro ao carregar paciente:", error);
@@ -152,12 +158,10 @@ export default function PatientEditPage() {
         return;
       }
 
-      // Toda mutação no banco precisa ocorrer dentro de um database.write()
       await database.write(async () => {
         const pacienteCollection = database.collections.get("paciente");
         const relacoesCollection = database.collections.get("paciente_dcnt");
 
-        // 1. Atualiza os dados principais do paciente
         const paciente = (await pacienteCollection.find(pacienteId)) as any;
         await paciente.update((p: any) => {
           p.nomeCompleto = nome;
@@ -166,7 +170,6 @@ export default function PatientEditPage() {
           p.nivelEscolaridade.id = escolaridade;
         });
 
-        // 2. Limpa as DCNTs antigas (Soft Delete para sincronizar com Supabase)
         const relacoesAntigas = await relacoesCollection
           .query(Q.where("id_paciente", pacienteId))
           .fetch();
@@ -175,7 +178,6 @@ export default function PatientEditPage() {
           await relacao.markAsDeleted();
         }
 
-        // 3. Insere as novas DCNTs selecionadas
         for (const dcntId of dcntsSelecionadas) {
           await relacoesCollection.create((pd: any) => {
             pd.paciente.id = pacienteId;
@@ -215,194 +217,160 @@ export default function PatientEditPage() {
   }));
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={{ flex: 1, backgroundColor: "#F8FAFC" }}
     >
-      <View style={styles.headerRow}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-        >
-          <Feather name="arrow-left" size={26} color="#0f0f0f" />
-        </TouchableOpacity>
-        <Text style={styles.textTitle}>Editar Paciente</Text>
-      </View>
-
-      <View style={styles.boxMid}>
-        {/* NOME */}
-        <View style={styles.boxInput}>
-          <AntDesign name="smile" size={24} color="#732cad" />
-          <TextInput
-            placeholder="Nome completo"
-            value={nome}
-            onChangeText={setNome}
-            autoCapitalize="words"
-            style={styles.input}
-            placeholderTextColor="#9CA3AF"
-          />
-        </View>
-
-        {/* DATA NASCIMENTO */}
-        <View style={styles.boxInput}>
-          <FontAwesome5 name="calendar-alt" size={24} color="#732cad" />
-          <TextInput
-            placeholder="Data de nascimento"
-            value={dataNascimento}
-            onChangeText={(text) => {
-              let formatted = text.replace(/\D/g, "");
-              if (formatted.length > 2) {
-                formatted = formatted.slice(0, 2) + "/" + formatted.slice(2);
-              }
-              if (formatted.length > 5) {
-                formatted = formatted.slice(0, 5) + "/" + formatted.slice(5);
-              }
-              setDataNascimento(formatted);
-            }}
-            keyboardType="numeric"
-            maxLength={10}
-            style={styles.input}
-            placeholderTextColor="#9CA3AF"
-          />
-        </View>
-
-        {/* SEXO */}
-        <CustomSelect
-          placeholder="Selecione o sexo"
-          modalTitle="Selecione o Sexo"
-          value={sexo}
-          options={opcoesSexo}
-          onValueChange={setSexo}
-          icon={<FontAwesome name="intersex" size={24} color="#732cad" />}
-        />
-
-        {/* ESCOLARIDADE */}
-        <CustomSelect
-          placeholder="Escolaridade"
-          modalTitle="Nível de Escolaridade"
-          value={escolaridade}
-          options={opcoesEscolaridade}
-          onValueChange={setEscolaridade}
-          icon={<Ionicons name="school" size={24} color="#732cad" />}
-        />
-
-        {/* DCNT */}
-        <TouchableOpacity
-          style={styles.boxInput}
-          onPress={() => setModalDcntVisivel(true)}
-          activeOpacity={0.7}
-        >
-          <FontAwesome name="heartbeat" size={24} color="#732cad" />
-          <View style={styles.inputPlaceholderContainer}>
-            <Text
-              style={{
-                color: dcntsSelecionadas.length > 0 ? "#0f0f0f" : "#9CA3AF",
-                fontSize: 16,
-              }}
-            >
-              {dcntsSelecionadas.length > 0
-                ? `${dcntsSelecionadas.length} DCNT(s) selecionada(s)`
-                : "DCNT referida (opcional)"}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* BOTÕES DE AÇÃO */}
-        <View style={styles.boxBotton}>
-          <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.tertiaryButton]}
-            onPress={getEditarPaciente}
-          >
-            {loading ? (
-              <ActivityIndicator color={"white"} size={"small"} />
-            ) : (
-              <Text style={styles.tertiaryButtonText}>Confirmar</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* --- MODAL DE SELEÇÃO MÚLTIPLA DE DCNT --- */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalDcntVisivel}
-        onRequestClose={() => setModalDcntVisivel(false)}
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Selecione as DCNTs</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
+            <Feather name="arrow-left" size={26} color="#0f0f0f" />
+          </TouchableOpacity>
+          <Text style={styles.textTitle}>Editar Paciente</Text>
+        </View>
 
-            <FlatList
-              data={listaDCNT}
-              keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => {
+        <View style={styles.boxMid}>
+          {/* NOME */}
+          <View style={styles.boxInput}>
+            <AntDesign name="smile" size={24} color="#732cad" />
+            <TextInput
+              placeholder="Nome completo"
+              value={nome}
+              onChangeText={setNome}
+              autoCapitalize="words"
+              style={styles.input}
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+
+          {/* DATA NASCIMENTO */}
+          <View style={styles.boxInput}>
+            <FontAwesome5 name="calendar-alt" size={24} color="#732cad" />
+            <TextInput
+              placeholder="Data de nascimento"
+              value={dataNascimento}
+              onChangeText={(text) => {
+                let formatted = text.replace(/\D/g, "");
+                if (formatted.length > 2) {
+                  formatted = formatted.slice(0, 2) + "/" + formatted.slice(2);
+                }
+                if (formatted.length > 5) {
+                  formatted = formatted.slice(0, 5) + "/" + formatted.slice(5);
+                }
+                setDataNascimento(formatted);
+              }}
+              keyboardType="numeric"
+              maxLength={10}
+              style={styles.input}
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+
+          {/* SEXO */}
+          <CustomSelect
+            placeholder="Selecione o sexo"
+            modalTitle="Selecione o Sexo"
+            value={sexo}
+            options={opcoesSexo}
+            onValueChange={setSexo}
+            icon={<FontAwesome name="intersex" size={24} color="#732cad" />}
+          />
+
+          {/* ESCOLARIDADE */}
+          <CustomSelect
+            placeholder="Escolaridade"
+            modalTitle="Nível de Escolaridade"
+            value={escolaridade}
+            options={opcoesEscolaridade}
+            onValueChange={setEscolaridade}
+            icon={<Ionicons name="school" size={24} color="#732cad" />}
+          />
+
+          {/* SEÇÃO DE CONDIÇÕES DE SAÚDE (DCNT) */}
+          <View style={styles.healthConditionSection}>
+            <Text style={styles.healthConditionQuestion}>
+              Algum profissional de saúde já informou que você tem alguma das
+              seguintes condições de saúde?
+            </Text>
+
+            <View style={styles.chipsContainer}>
+              {listaDCNT.map((item) => {
                 const isSelected = dcntsSelecionadas.includes(item.id);
-
                 return (
                   <TouchableOpacity
-                    style={[
-                      styles.checkboxContainer,
-                      isSelected && styles.checkboxSelected,
-                    ]}
-                    onPress={() => toggleDcnt(item.id)}
+                    key={item.id}
+                    style={[styles.chip, isSelected && styles.chipSelected]}
+                    onPress={() => toggleDcnt(item.id, item.tipo)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons
-                      name={isSelected ? "checkbox" : "square-outline"}
-                      size={24}
-                      color={isSelected ? "#A824EE" : "#64748B"}
-                    />
                     <Text
                       style={[
-                        styles.checkboxLabel,
-                        isSelected && styles.checkboxLabelSelected,
+                        styles.chipText,
+                        isSelected && styles.chipTextSelected,
                       ]}
                     >
-                      {capitalizarNome(item.tipo)}
+                      {item.tipo}
                     </Text>
                   </TouchableOpacity>
                 );
-              }}
-            />
+              })}
+            </View>
+          </View>
+
+          {/* BOTÕES DE AÇÃO */}
+          <View style={styles.boxBotton}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
-              style={[
-                styles.button,
-                styles.primaryButton,
-                { marginTop: 15, width: "100%" },
-              ]}
-              onPress={() => setModalDcntVisivel(false)}
+              style={[styles.button, styles.tertiaryButton]}
+              onPress={getEditarPaciente}
             >
-              <Text style={styles.primaryButtonText}>Concluído</Text>
+              {loading ? (
+                <ActivityIndicator color={"white"} size={"small"} />
+              ) : (
+                <Text style={styles.tertiaryButtonText}>Confirmar</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
-// Estilos inalterados
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: "#F8FAFC", padding: 24 },
-  headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 30 },
+  container: {
+    flexGrow: 1,
+    backgroundColor: "#F8FAFC",
+    padding: 24,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 30,
+  },
   textTitle: {
     fontSize: 22,
     fontWeight: "bold",
     color: "#0f0f0f",
     marginLeft: 16,
   },
-  boxMid: { width: "100%" },
+  boxMid: {
+    width: "100%",
+  },
   boxInput: {
     height: 56,
     width: "100%",
@@ -422,16 +390,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#0f0f0f",
   },
-  inputPlaceholderContainer: {
-    flex: 1,
-    height: "100%",
-    justifyContent: "center",
-    marginLeft: 12,
+  healthConditionSection: {
+    width: "100%",
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  healthConditionQuestion: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#334155",
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  chipsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  chipSelected: {
+    backgroundColor: "#F3E8FF",
+    borderColor: "#A824EE",
+  },
+  chipText: {
+    fontSize: 14,
+    color: "#475569",
+    fontWeight: "500",
+  },
+  chipTextSelected: {
+    color: "#A824EE",
+    fontWeight: "700",
   },
   boxBotton: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 20,
+    marginTop: 10,
     gap: 12,
   },
   button: {
@@ -446,49 +446,18 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#732cad",
   },
-  tertiaryButton: { flex: 1, backgroundColor: "#732cad" },
-  cancelButtonText: { fontSize: 16, fontWeight: "700", color: "#732cad" },
-  tertiaryButtonText: { fontSize: 16, fontWeight: "700", color: "#ffffff" },
-  primaryButton: { backgroundColor: "#A824EE" },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  modalOverlay: {
+  tertiaryButton: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 40,
+    backgroundColor: "#732cad",
   },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    maxHeight: "80%",
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#732cad",
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0F172A",
-    marginBottom: 15,
-    textAlign: "center",
+  tertiaryButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#ffffff",
   },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  checkboxSelected: {
-    backgroundColor: "#EFF6FF",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    borderBottomWidth: 0,
-  },
-  checkboxLabel: { marginLeft: 12, fontSize: 16, color: "#334155" },
-  checkboxLabelSelected: { color: "#A824EE", fontWeight: "600" },
 });
