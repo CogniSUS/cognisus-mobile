@@ -1,3 +1,4 @@
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import { QuestionCard } from "@/components/ui/question-card";
 import { TestAbandonModal } from "@/components/ui/test-abandon-modal";
 import { TestHeader } from "@/components/ui/test-header";
@@ -19,7 +20,6 @@ import {
 } from "@/utils/meemHelpers";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { Q } from "@nozbe/watermelondb";
-import { Picker } from "@react-native-picker/picker";
 import type { Href } from "expo-router";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -265,9 +265,8 @@ export default function TestExecutePage() {
           av.scoreOrientacaoTemporal = scores.orientacao_temporal;
           av.scoreTotal = scores.total;
 
-          // Salva o veredito definitivo e a justificativa
           av.classificacao = classificacaoDefinitiva;
-          av.justificativaAlteracao = justificativaFinal; // Requer atualização no Model AvaliacaoTesteMeem
+          av.justificativaAlteracao = justificativaFinal;
         });
         novaAvaliacaoId = novaAvaliacao.id;
       });
@@ -303,6 +302,11 @@ export default function TestExecutePage() {
     totalScoreAtual,
     patientEscolaridade,
   );
+
+  const opcoesClassificacao = [
+    { label: "Normal", value: CLASSIFICACAO_NORMAL },
+    { label: "Possível Déficit Cognitivo", value: CLASSIFICACAO_DEFICIT },
+  ];
 
   return (
     <KeyboardAvoidingView
@@ -413,30 +417,19 @@ export default function TestExecutePage() {
                 {isOverride && (
                   <View style={styles.overrideForm}>
                     <Text style={styles.inputLabel}>Nova Classificação:</Text>
-                    <View style={styles.pickerContainer}>
-                      <Picker
-                        selectedValue={manualClassification}
-                        onValueChange={(itemValue) =>
-                          setManualClassification(itemValue)
-                        }
-                        style={styles.picker}
-                        dropdownIconColor="#A824EE"
-                      >
-                        {/* Forçar a prop color nos items resolve o bug do tema nativo */}
-                        <Picker.Item
-                          label="Normal"
-                          value={CLASSIFICACAO_NORMAL}
-                          color="#0F172A"
-                        />
-                        <Picker.Item
-                          label="Possível Déficit Cognitivo"
-                          value={CLASSIFICACAO_DEFICIT}
-                          color="#0F172A"
-                        />
-                      </Picker>
-                    </View>
 
-                    <Text style={styles.inputLabel}>
+                    <CustomSelect
+                      placeholder="Selecione a classificação"
+                      modalTitle="Nova Classificação"
+                      value={manualClassification}
+                      options={opcoesClassificacao}
+                      onValueChange={setManualClassification}
+                      icon={
+                        <Feather name="activity" size={20} color="#732cad" />
+                      }
+                    />
+
+                    <Text style={[styles.inputLabel, { marginTop: -4 }]}>
                       Justificativa Clínica (Opcional):
                     </Text>
                     <TextInput
@@ -659,7 +652,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   overrideForm: {
-    backgroundColor: "#FAF5FF", // Fundo roxo bem sutil
+    backgroundColor: "#FAF5FF",
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -670,17 +663,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#4B5563",
     fontWeight: "600",
-  },
-  pickerContainer: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 12,
-    height: 50,
-    justifyContent: "center",
-  },
-  picker: {
-    width: "100%",
   },
   textArea: {
     backgroundColor: "#FFFFFF",

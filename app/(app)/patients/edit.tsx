@@ -1,3 +1,4 @@
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import { database } from "@/database/database";
 import { useToast } from "@/hooks/useToast";
 import { capitalizarNome } from "@/utils/formatters";
@@ -9,7 +10,6 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 import { Q } from "@nozbe/watermelondb";
-import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -205,6 +205,17 @@ export default function PatientEditPage() {
     carregarDados();
   }, []);
 
+  const opcoesSexo = [
+    { label: "Masculino", value: "masculino" },
+    { label: "Feminino", value: "feminino" },
+    { label: "Outro", value: "outro" },
+  ];
+
+  const opcoesEscolaridade = listaEscolaridade.map((item) => ({
+    label: capitalizarNome(item.tipo),
+    value: item.id,
+  }));
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -263,53 +274,24 @@ export default function PatientEditPage() {
           </View>
 
           {/* SEXO */}
-          <View style={styles.boxInput}>
-            <FontAwesome name="intersex" size={24} color="#732cad" />
-            <Picker
-              selectedValue={sexo}
-              onValueChange={(itemValue) => setSexo(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item
-                label="Selecione o sexo"
-                value=""
-                enabled={false}
-                color="#9CA3AF"
-              />
-              <Picker.Item
-                label="Masculino"
-                value="masculino"
-                color="#0f0f0f"
-              />
-              <Picker.Item label="Feminino" value="feminino" color="#0f0f0f" />
-              <Picker.Item label="Outro" value="outro" color="#0f0f0f" />
-            </Picker>
-          </View>
+          <CustomSelect
+            placeholder="Selecione o sexo"
+            modalTitle="Selecione o Sexo"
+            value={sexo}
+            options={opcoesSexo}
+            onValueChange={setSexo}
+            icon={<FontAwesome name="intersex" size={24} color="#732cad" />}
+          />
 
           {/* ESCOLARIDADE */}
-          <View style={styles.boxInput}>
-            <Ionicons name="school" size={24} color="#732cad" />
-            <Picker
-              selectedValue={escolaridade}
-              onValueChange={(itemValue) => setEscolaridade(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item
-                label="Escolaridade"
-                value={null}
-                enabled={false}
-                color="#9CA3AF"
-              />
-              {listaEscolaridade.map((item) => (
-                <Picker.Item
-                  key={item.id}
-                  label={capitalizarNome(item.tipo)}
-                  value={item.id}
-                  color="#0f0f0f"
-                />
-              ))}
-            </Picker>
-          </View>
+          <CustomSelect
+            placeholder="Escolaridade"
+            modalTitle="Nível de Escolaridade"
+            value={escolaridade}
+            options={opcoesEscolaridade}
+            onValueChange={setEscolaridade}
+            icon={<Ionicons name="school" size={24} color="#732cad" />}
+          />
 
           {/* SEÇÃO DE CONDIÇÕES DE SAÚDE (DCNT) */}
           <View style={styles.healthConditionSection}>
@@ -407,11 +389,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     color: "#0f0f0f",
-  },
-  picker: {
-    flex: 1,
-    marginLeft: 4,
-    height: "100%",
   },
   healthConditionSection: {
     width: "100%",
