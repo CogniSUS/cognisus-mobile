@@ -1,6 +1,7 @@
 import { useLogout } from "@/hooks/useLogout";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +22,7 @@ export function AppHeader() {
 
   return (
     <>
+      <StatusBar style="dark" />
       <SafeAreaView edges={["top"]} style={styles.safeArea}>
         <LinearGradient
           colors={["#FCFAFE", "#F0E5FB", "#E4D4F6"]}
@@ -46,14 +48,22 @@ export function AppHeader() {
 
           <View style={styles.rightSection}>
             <Pressable style={styles.iconButton}>
-              <Ionicons name="settings-outline" size={21} color="#6E34B5" />
+              <Ionicons
+                name="settings-outline"
+                size={21}
+                color="#6E34B5"
+              />
             </Pressable>
 
             <Pressable
               style={styles.profileButton}
               onPress={handleProfilePress}
             >
-              <Ionicons name="person-outline" size={16} color="#FFFFFF" />
+              <Ionicons
+                name="person-outline"
+                size={16}
+                color="#FFFFFF"
+              />
             </Pressable>
           </View>
         </LinearGradient>
@@ -70,7 +80,7 @@ export function AppHeader() {
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: "transparent",
+    backgroundColor: "#E4D4F6",
   },
   container: {
     minHeight: 88,

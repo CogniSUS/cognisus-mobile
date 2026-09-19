@@ -10,12 +10,30 @@ type ValidRoute =
   | "/(app)/results"
   | "/(app)/informations";
 
+type MenuSection = "home" | "patients" | "results" | "informations";
 export function MenuApp() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { isTestInProgress, onMenuNavigationAttempt } = useTestProtection();
 
-  const isActive = (route: string) => pathname === route;
+  const isActive = (section: MenuSection) => {
+    switch (section) {
+      case "home":
+        return pathname === "/" || pathname === "/(app)";
+
+      case "patients":
+        return pathname.startsWith("/patients");
+
+      case "results":
+        return pathname.startsWith("/results");
+
+      case "informations":
+        return pathname.startsWith("/informations");
+
+      default:
+        return false;
+    }
+  };
 
   const handleNavigation = (route: ValidRoute) => {
     if (isTestInProgress && onMenuNavigationAttempt) {
@@ -37,43 +55,43 @@ export function MenuApp() {
     >
       <View style={styles.container}>
         <Pressable
-          style={[styles.item, isActive("/(app)") && styles.activeItem]}
+          style={[styles.item, isActive("home") && styles.activeItem]}
           onPress={() => handleNavigation("/(app)")}
         >
           <Ionicons name="home-outline" size={30} color="#B7A5D9" />
           <Text
-            style={[styles.label, isActive("/(app)") && styles.activeLabel]}
+            style={[styles.label, isActive("home") && styles.activeLabel]}
           >
             Início
           </Text>
         </Pressable>
 
         <Pressable
-          style={[styles.item, isActive("/patients") && styles.activeItem]}
+          style={[styles.item, isActive("patients") && styles.activeItem]}
           onPress={() => handleNavigation("/(app)/patients")}
         >
           <Ionicons name="people-outline" size={30} color="#B7A5D9" />
           <Text
-            style={[styles.label, isActive("/patients") && styles.activeLabel]}
+            style={[styles.label, isActive("patients") && styles.activeLabel]}
           >
             Pacientes
           </Text>
         </Pressable>
 
         <Pressable
-          style={[styles.item, isActive("/results") && styles.activeItem]}
+          style={[styles.item, isActive("results") && styles.activeItem]}
           onPress={() => handleNavigation("/(app)/results")}
         >
           <Ionicons name="clipboard-outline" size={30} color="#B7A5D9" />
           <Text
-            style={[styles.label, isActive("/results") && styles.activeLabel]}
+            style={[styles.label, isActive("results") && styles.activeLabel]}
           >
             Resultados
           </Text>
         </Pressable>
 
         <Pressable
-          style={[styles.item, isActive("/informations") && styles.activeItem]}
+          style={[styles.item, isActive("informations") && styles.activeItem]}
           onPress={() => handleNavigation("/(app)/informations")}
         >
           <Ionicons
@@ -84,7 +102,7 @@ export function MenuApp() {
           <Text
             style={[
               styles.label,
-              isActive("/informations") && styles.activeLabel,
+              isActive("informations") && styles.activeLabel,
             ]}
           >
             Informações
