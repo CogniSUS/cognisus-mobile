@@ -1,76 +1,82 @@
-/**
- * Card que exibe dados do paciente selecionado
- * - Avatar roxo com ícone de pessoa
- * - Nome completo do paciente
- * - Idade calculada + Sexo
- *
- * Props:
- * - patient: Patient - Dados do paciente
- */
-import { Patient, calculateAge } from "@/types/patient";
+import { Patient } from "@/types/patient";
+import { formatCpf } from "@/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
-interface PatientCardProps {
-  patient: Patient;
-}
-export function PatientCard({ patient }: PatientCardProps) {
-  const age = calculateAge(patient.data_nascimento);
 
+interface PatientCardProps {
+  patient: Pick<Patient, "nome_completo" | "cpf">;
+}
+
+export function PatientCard({ patient }: PatientCardProps) {
   return (
     <View style={styles.container}>
-      {/* Avatar com ícone */}
       <View style={styles.avatar}>
-        <Ionicons name="person" size={28} color="#FFFFFF" />
+        <Ionicons
+          name="person-outline"
+          size={28}
+          color="#A824EE"
+        />
       </View>
 
-      {/* Conteúdo */}
       <View style={styles.content}>
-        <Text style={styles.name}>{patient.nome_completo}</Text>
-        <Text style={styles.subtitle}>
-          {age} anos • {patient.sexo}
+        <Text style={styles.name}>
+          {patient.nome_completo}
+        </Text>
+
+        <Text style={styles.cpf}>
+          CPF: {formatCpf(patient.cpf)}
         </Text>
       </View>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 15,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 12,
-    gap: 12,
+    gap: 13,
+    borderWidth: 1,
+    borderColor: "#ECE8F2",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
+
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#A855F7",
+    backgroundColor: "#F3E8FF",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
+
   content: {
     flex: 1,
     justifyContent: "center",
   },
+
   name: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#0F172A",
-    marginBottom: 4,
+    fontWeight: "700",
+    color: "#334155",
   },
-  subtitle: {
-    fontSize: 13,
-    color: "#64748B",
-    fontWeight: "500",
+
+  cpf: {
+    color: "#94A3B8",
+    fontSize: 12,
+    marginTop: 3,
   },
 });
