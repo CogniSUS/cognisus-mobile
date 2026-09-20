@@ -1,6 +1,7 @@
 import { useLogout } from "@/hooks/useLogout";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
@@ -47,7 +48,7 @@ export function AppHeader() {
           </View>
 
           <View style={styles.rightSection}>
-            <Pressable style={styles.iconButton}>
+            <Pressable style={styles.iconButton} onPress={()=>router.replace("/(app)/informations/development")}>
               <Ionicons
                 name="settings-outline"
                 size={21}
