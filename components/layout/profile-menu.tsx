@@ -26,7 +26,7 @@ export function ProfileMenu({
           disabled={isLoggingOut}
           onPress={()=>{
             onClose()
-            router.replace("/(app)/informations/development")
+            router.replace("/(app)/development")
           }}
         >
           <Ionicons name="person-outline" size={18} color="#6E34B5" />

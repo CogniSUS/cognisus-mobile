@@ -48,7 +48,7 @@ export function AppHeader() {
           </View>
 
           <View style={styles.rightSection}>
-            <Pressable style={styles.iconButton} onPress={()=>router.replace("/(app)/informations/development")}>
+            <Pressable style={styles.iconButton} onPress={()=>router.replace("/(app)/development")}>
               <Ionicons
                 name="settings-outline"
                 size={21}

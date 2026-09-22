@@ -3,6 +3,7 @@ import { EducationalCard } from "@/components/features/informations/educational-
 import { InformationActionCard } from "@/components/features/informations/information-action-card";
 import { LogoutButton } from "@/components/features/informations/logout-button";
 import { SupportCard } from "@/components/features/informations/support-card";
+import { router } from "expo-router";
 import {
   ScrollView,
   StyleSheet,
@@ -77,6 +78,7 @@ export default function InformationsPage() {
           "Colesterol:",
           "Importância:",
         ]}
+        
       />
 
       <EducationalCard
@@ -97,7 +99,7 @@ export default function InformationsPage() {
           subtitle="Instruções para aplicação dos testes"
           iconColor="#2563EB"
           iconBackground="#DBEAFE"
-          // onPress={() => router.push("/")}  # Implementar quando tiver rota de guia de testes
+          onPress={()=>router.replace("/(app)/development")}
         />
 
         <InformationActionCard
@@ -106,7 +108,7 @@ export default function InformationsPage() {
           subtitle="Tire suas dúvidas sobre o app"
           iconColor="#16A34A"
           iconBackground="#DCFCE7"
-          // onPress={() => router.push("/")}  # Implementar quando tiver rota de FAQ
+          onPress={()=>router.replace("/(app)/development")}
         />
 
         <InformationActionCard
@@ -115,7 +117,7 @@ export default function InformationsPage() {
           subtitle="Ajuste preferências do aplicativo"
           iconColor="#F97316"
           iconBackground="#FFEDD5"
-          // onPress={() => router.push("/")}  # Implementar quando tiver rota de configurações
+          onPress={()=>router.replace("/(app)/development")}
         />
       </View>
 

@@ -19,7 +19,7 @@ export function MenuApp() {
   const isActive = (section: MenuSection) => {
     switch (section) {
       case "home":
-        return pathname === "/" || pathname === "/(app)";
+        return pathname === "/" || pathname === "/(app)" || pathname === "/development";
 
       case "patients":
         return pathname.startsWith("/patients");
