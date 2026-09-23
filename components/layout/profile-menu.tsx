@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 interface ProfileMenuProps {
@@ -23,6 +24,10 @@ export function ProfileMenu({
         <Pressable 
           style={styles.menuItem}
           disabled={isLoggingOut}
+          onPress={()=>{
+            onClose()
+            router.replace("/(app)/development")
+          }}
         >
           <Ionicons name="person-outline" size={18} color="#6E34B5" />
           <Text style={styles.menuItemText}>Perfil</Text>
