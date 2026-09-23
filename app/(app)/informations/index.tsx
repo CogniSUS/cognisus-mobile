@@ -4,12 +4,7 @@ import { InformationActionCard } from "@/components/features/informations/inform
 import { LogoutButton } from "@/components/features/informations/logout-button";
 import { SupportCard } from "@/components/features/informations/support-card";
 import { router } from "expo-router";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 const healthyHabits = [
   "Pratique exercícios físicos regularmente (30 min/dia)",
@@ -42,15 +37,11 @@ export default function InformationsPage() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.pageTitle}>
-        Informações
-      </Text>
+      <Text style={styles.pageTitle}>Informações</Text>
 
       <AboutCard />
 
-      <Text style={styles.sectionTitle}>
-        Conteúdos Educativos
-      </Text>
+      <Text style={styles.sectionTitle}>Conteúdos Educativos</Text>
 
       <EducationalCard
         icon="pulse-outline"
@@ -78,7 +69,6 @@ export default function InformationsPage() {
           "Colesterol:",
           "Importância:",
         ]}
-        
       />
 
       <EducationalCard
@@ -99,7 +89,7 @@ export default function InformationsPage() {
           subtitle="Instruções para aplicação dos testes"
           iconColor="#2563EB"
           iconBackground="#DBEAFE"
-          onPress={()=>router.replace("/(app)/development")}
+          onPress={() => router.replace("/(app)/informations/development")}
         />
 
         <InformationActionCard
@@ -108,7 +98,7 @@ export default function InformationsPage() {
           subtitle="Tire suas dúvidas sobre o app"
           iconColor="#16A34A"
           iconBackground="#DCFCE7"
-          onPress={()=>router.replace("/(app)/development")}
+          onPress={() => router.replace("/(app)/informations/development")}
         />
 
         <InformationActionCard
@@ -117,7 +107,7 @@ export default function InformationsPage() {
           subtitle="Ajuste preferências do aplicativo"
           iconColor="#F97316"
           iconBackground="#FFEDD5"
-          onPress={()=>router.replace("/(app)/development")}
+          onPress={() => router.replace("/(app)/informations/development")}
         />
       </View>
 
