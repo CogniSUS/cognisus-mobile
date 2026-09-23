@@ -117,7 +117,7 @@ export const meemSteps: TestStep[] = [
   // --- ETAPA 5/12 ---
   {
     id: "atencao_calculo",
-    title: "Atenção e Cálculo",
+    title: "Atenção e Cálculo (Subtração)",
     instruction:
       'Peça ao paciente: "Subtraia 7 de 100 e continue subtraindo 7 do resultado até eu mandar parar"',
     questions: [
@@ -126,6 +126,41 @@ export const meemSteps: TestStep[] = [
       { id: "calc_79", label: "79 (86-7)", points: 1, dominio: "atencao" },
       { id: "calc_72", label: "72 (79-7)", points: 1, dominio: "atencao" },
       { id: "calc_65", label: "65 (72-7)", points: 1, dominio: "atencao" },
+    ],
+    alternativeTitle: "Atenção (Soletração MUNDO)",
+    alternativeInstruction:
+      'Peça ao paciente: "Soletre a palavra MUNDO de trás para frente (O-D-N-U-M)"',
+    alternativeQuestions: [
+      {
+        id: "mundo_o",
+        label: "Acertou a letra 'O'?",
+        points: 1,
+        dominio: "atencao",
+      },
+      {
+        id: "mundo_d",
+        label: "Acertou a letra 'D'?",
+        points: 1,
+        dominio: "atencao",
+      },
+      {
+        id: "mundo_n",
+        label: "Acertou a letra 'N'?",
+        points: 1,
+        dominio: "atencao",
+      },
+      {
+        id: "mundo_u",
+        label: "Acertou a letra 'U'?",
+        points: 1,
+        dominio: "atencao",
+      },
+      {
+        id: "mundo_m",
+        label: "Acertou a letra 'M'?",
+        points: 1,
+        dominio: "atencao",
+      },
     ],
   },
 
@@ -163,7 +198,7 @@ export const meemSteps: TestStep[] = [
     title: "Nomeação",
     instruction: 'Mostre objetos e pergunte: "O que é isto?"',
     hasTimer: true,
-    amountOfTime: 30,
+    amountOfTime: 20,
     questions: [
       {
         id: "nom_relogio",
@@ -230,7 +265,7 @@ export const meemSteps: TestStep[] = [
     instruction:
       'Mostre a frase "FECHE OS OLHOS" e diga: "Leia e faça o que está escrito"',
     hasTimer: true,
-    amountOfTime: 30,
+    amountOfTime: 10,
     questions: [
       {
         id: "lei_olhos",
@@ -259,12 +294,13 @@ export const meemSteps: TestStep[] = [
     ],
   },
 
-  // --- ETAPA 12/12 (Padrão MEEM) ---
+  // --- ETAPA 12/12 ---
   {
     id: "desenho",
     title: "Desenho (Praxia Construtiva)",
     instruction:
       'Mostre o desenho dos pentágonos cruzados e peça: "Copie este desenho no papel"',
+    referenceImage: require("@/assets/images/pentagonos.png"),
     questions: [
       {
         id: "des_pentagonos",
