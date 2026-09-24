@@ -61,7 +61,7 @@ export default function SignInPage() {
     <View style={style.root}>
       <KeyboardAvoidingView
         style={style.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "android" ? "padding" : undefined}
       >
         <View style={style.content}>
           {/* BoxTop da Logo mantido intacto conforme solicitado */}
@@ -150,7 +150,7 @@ export default function SignInPage() {
 const style = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#C1B6FF", // Design System: Auth (telas de login)
+    backgroundColor: "#C1B6FF",
   },
   container: {
     flex: 1,
@@ -162,7 +162,7 @@ const style = StyleSheet.create({
   },
   boxTop: {
     alignItems: "center",
-    marginBottom: 32, // Substitui o marginTop negativo e posiciona a logo corretamente
+    marginBottom: 32,
   },
   image: {
     width: 150,
@@ -170,12 +170,12 @@ const style = StyleSheet.create({
     borderRadius: 75,
   },
   card: {
-    backgroundColor: "#FFFFFF", // Design System: Card Padrão
+    backgroundColor: "#FFFFFF",
     borderRadius: 24,
     paddingTop: 32,
     paddingBottom: 32,
     paddingHorizontal: 24,
-    shadowColor: "#000", // Design System: Default Shadow (5% opacity)
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
@@ -186,14 +186,14 @@ const style = StyleSheet.create({
     alignItems: "center",
     height: 56,
     borderWidth: 1,
-    borderColor: "#CBD5E1", // Design System: Cinza moderado (input borders)
+    borderColor: "#CBD5E1",
     borderRadius: 12,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     marginBottom: 16,
   },
   passwordWrapper: {
-    marginBottom: 32, // Distância maior (respiro) entre input final e botão
+    marginBottom: 32,
   },
   iconLeft: {
     marginRight: 12,
@@ -201,19 +201,19 @@ const style = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    color: "#1F2937", // Design System: Cinza escuro (textos principais)
+    color: "#1F2937",
     fontSize: 15,
   },
   primaryButton: {
     height: 56,
-    backgroundColor: "#A824EE", // Design System: Roxo Principal (Brand)
+    backgroundColor: "#A824EE",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,
   },
   primaryButtonDisabled: {
-    backgroundColor: "#D1D5DB", // Design System: Disabled states background
+    backgroundColor: "#D1D5DB",
   },
   primaryButtonText: {
     fontSize: 16,
@@ -226,6 +226,6 @@ const style = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#4D62DA", // Design System: Azul-roxo (textos de cadastro)
+    color: "#4D62DA",
   },
 });

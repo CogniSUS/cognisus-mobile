@@ -1,10 +1,11 @@
 import Logo from "@/assets/images/file.jpg";
 import { useToast } from "@/hooks/useToast";
-import { formatCpf } from "@/utils/formatters"; // Importando do seu utils padrão
+import { formatCpf } from "@/utils/formatters";
 import { supabase } from "@/utils/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
+
 import {
   ActivityIndicator,
   Image,
@@ -21,11 +22,17 @@ import {
 
 export default function SignUpPage() {
   const [name, setName] = useState("");
+
   const [cpf, setCpf] = useState("");
+
   const [email, setEmail] = useState("");
+
   const [password, setPassword] = useState("");
+
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
   const { success: showSuccess, error: showError, info: showInfo } = useToast();
@@ -34,32 +41,39 @@ export default function SignUpPage() {
     try {
       setLoading(true);
 
-      // Remove a máscara para validação e envio para o banco
       const cleanCpf = cpf.replace(/\D/g, "");
 
       if (!email || !password || !confirmPassword || !cleanCpf || !name) {
         setLoading(false);
+
         return showInfo("Informe os campos obrigatórios!");
       } else if (!email.includes("@")) {
         setLoading(false);
+
         return showError("Email inválido");
       } else if (cleanCpf.length !== 11) {
         setLoading(false);
+
         return showError("CPF deve conter exatamente 11 dígitos");
       } else if (password.length < 6) {
         setLoading(false);
+
         return showError("Senha deve ter pelo menos 6 caracteres");
       } else if (password !== confirmPassword) {
         setLoading(false);
+
         return showError("Senha e confirmar senha estão diferentes");
       }
 
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
+
         password,
+
         options: {
           data: {
             nome_completo: name.trim(),
+
             cpf: cleanCpf, // Salvando no banco sem a máscara
           },
         },
@@ -67,6 +81,7 @@ export default function SignUpPage() {
 
       if (error) {
         setLoading(false);
+
         return showError(error.message);
       }
 
@@ -75,15 +90,19 @@ export default function SignUpPage() {
 
         if (!userId) {
           setLoading(false);
+
           return showError("Não foi possível obter o ID do usuário");
         }
 
         showSuccess("Cadastro realizado com sucesso!");
+
         showInfo("Verifique seu e-mail para confirmar a conta.");
+
         router.replace("/(app)");
       }
     } catch (err) {
       console.error(err);
+
       showError("Ocorreu um erro ao realizar o cadastro.");
     } finally {
       setLoading(false);
@@ -94,16 +113,18 @@ export default function SignUpPage() {
     <View style={style.root}>
       <KeyboardAvoidingView
         style={style.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "android" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={style.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
           <View style={style.content}>
             <View style={style.boxTop}>
               <Image source={Logo} style={style.image} />
+
               <Text style={style.subtitle}>Cadastro de Profissional</Text>
             </View>
 
@@ -115,6 +136,7 @@ export default function SignUpPage() {
                   color="#9CA3AF"
                   style={style.iconLeft}
                 />
+
                 <TextInput
                   placeholder="Nome Completo"
                   placeholderTextColor="#9CA3AF"
@@ -132,6 +154,7 @@ export default function SignUpPage() {
                   color="#9CA3AF"
                   style={style.iconLeft}
                 />
+
                 <TextInput
                   placeholder="CPF"
                   placeholderTextColor="#9CA3AF"
@@ -150,6 +173,7 @@ export default function SignUpPage() {
                   color="#9CA3AF"
                   style={style.iconLeft}
                 />
+
                 <TextInput
                   placeholder="E-mail"
                   keyboardType="email-address"
@@ -168,6 +192,7 @@ export default function SignUpPage() {
                   color="#9CA3AF"
                   style={style.iconLeft}
                 />
+
                 <TextInput
                   placeholder="Senha"
                   placeholderTextColor="#9CA3AF"
@@ -177,6 +202,7 @@ export default function SignUpPage() {
                   value={password}
                   onChangeText={setPassword}
                 />
+
                 <Pressable
                   onPress={() => setShowPassword(!showPassword)}
                   hitSlop={10}
@@ -196,6 +222,7 @@ export default function SignUpPage() {
                   color="#9CA3AF"
                   style={style.iconLeft}
                 />
+
                 <TextInput
                   placeholder="Confirmar Senha"
                   placeholderTextColor="#9CA3AF"
@@ -205,6 +232,7 @@ export default function SignUpPage() {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                 />
+
                 <Pressable
                   onPress={() => setShowPassword(!showPassword)}
                   hitSlop={10}
@@ -220,6 +248,7 @@ export default function SignUpPage() {
               <TouchableOpacity
                 style={[
                   style.primaryButton,
+
                   loading && style.primaryButtonDisabled,
                 ]}
                 onPress={getCadastro}
