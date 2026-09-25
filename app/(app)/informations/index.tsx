@@ -89,7 +89,7 @@ export default function InformationsPage() {
           subtitle="Instruções para aplicação dos testes"
           iconColor="#2563EB"
           iconBackground="#DBEAFE"
-          onPress={() => router.replace("/(app)/informations/development")}
+          onPress={() => router.push("/(app)/informations/select-instruments")}
         />
 
         <InformationActionCard
