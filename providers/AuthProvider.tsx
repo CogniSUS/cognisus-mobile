@@ -26,6 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -48,34 +50,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      setIsLoading(true);
+      setIsLoggingOut(true);
 
-      // 1. A Trava de Segurança: Checa se há algo para subir
       const dadosPendentes = await hasUnsyncedChanges({ database });
 
       if (dadosPendentes) {
         console.log(
           "Dados offline detectados. Forçando sincronização antes do logout...",
         );
-        await syncData(); // Espera o PUSH terminar!
+        await syncData();
       }
 
-      // 2. Só depois desloga
-      await supabase.auth.signOut();
-
-      // 3. E por último destrói o banco local
       await database.write(async () => {
         await database.unsafeResetDatabase();
       });
+
+      await supabase.auth.signOut();
     } catch (error) {
       console.error("Erro ao tentar deslogar:", error);
     } finally {
-      setIsLoading(false);
+      setIsLoggingOut(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, isLoading, logout }}>
+    <AuthContext.Provider
+      value={{ session, user, isLoading: isLoading || isLoggingOut, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

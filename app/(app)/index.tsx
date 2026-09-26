@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
   Animated,
   FlatList,
+  InteractionManager,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -37,7 +39,7 @@ type PacienteMapeado = {
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { info: showInfo, error: showError } = useToast();
+  const { error: showError } = useToast();
   const params = useLocalSearchParams<{ cpfBuscaInicial?: string }>();
 
   const insets = useSafeAreaInsets();
@@ -45,6 +47,7 @@ export default function HomePage() {
   const [patients, setPatients] = useState<PacienteMapeado[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // Estado do Pull-to-Refresh
 
   // Estados e Animação do Modal Customizado
   const [modalVisible, setModalVisible] = useState(false);
@@ -56,62 +59,109 @@ export default function HomePage() {
     return user?.user_metadata?.nome_completo || user?.email || "Profissional";
   }, [user]);
 
-  async function carregarPacientes() {
-    try {
-      setIsLoading(true);
-      const todosPacientes = await PacienteRepository.listarTodos();
-      const pacientesMapeados: PacienteMapeado[] = [];
+  const carregarPacientes = useCallback(
+    async (isSilencioso = false) => {
+      try {
+        if (!isSilencioso) setIsLoading(true);
 
-      for (const p of todosPacientes) {
-        let ultimaAvaliacaoData = null;
-        let escolaridadeNome = undefined;
+        const todosPacientes = await PacienteRepository.listarTodos();
+        const pacientesMapeados: PacienteMapeado[] = [];
 
-        try {
-          const avaliacoes = await p.avaliacoes
-            .extend(Q.sortBy("created_at", Q.desc), Q.take(1))
-            .fetch();
+        for (const p of todosPacientes) {
+          let ultimaAvaliacaoData = null;
+          let escolaridadeNome = undefined;
 
-          if (avaliacoes.length > 0) {
-            const a = avaliacoes[0];
-            ultimaAvaliacaoData =
-              a.dataFim || a.dataInicio || a.createdAt?.toISOString();
+          try {
+            const avaliacoes = await p.avaliacoes
+              .extend(Q.sortBy("created_at", Q.desc), Q.take(1))
+              .fetch();
+
+            if (avaliacoes.length > 0) {
+              const a = avaliacoes[0];
+              let dataCriacaoAvaliacao = null;
+              if (a.createdAt) {
+                dataCriacaoAvaliacao =
+                  a.createdAt instanceof Date
+                    ? a.createdAt.toISOString()
+                    : new Date(a.createdAt).toISOString();
+              }
+
+              ultimaAvaliacaoData =
+                a.dataFim || a.dataInicio || dataCriacaoAvaliacao;
+            }
+
+            if (p.nivelEscolaridade) {
+              const esc = await p.nivelEscolaridade.fetch();
+              escolaridadeNome = esc ? esc.tipo : undefined;
+            }
+          } catch (e) {
+            console.warn(
+              `Aviso: Falha ao carregar dependências do paciente ${p.id}`,
+            );
           }
 
-          if (p.nivelEscolaridade) {
-            const esc = await p.nivelEscolaridade.fetch();
-            escolaridadeNome = esc ? esc.tipo : undefined;
-          }
-        } catch (e) {
-          console.warn(
-            `Aviso: Falha ao carregar dependências do paciente ${p.id}`,
-          );
+          pacientesMapeados.push({
+            id: p.id,
+            nome_completo: p.nomeCompleto,
+            cpf: p.cpf,
+            data_nascimento: p.dataNascimento,
+            sexo: p.sexo,
+            escolaridade_nome: escolaridadeNome,
+            ultima_avaliacao: ultimaAvaliacaoData,
+          });
         }
 
-        pacientesMapeados.push({
-          id: p.id,
-          nome_completo: p.nomeCompleto,
-          cpf: p.cpf,
-          data_nascimento: p.dataNascimento,
-          sexo: p.sexo,
-          escolaridade_nome: escolaridadeNome,
-          ultima_avaliacao: ultimaAvaliacaoData,
-        });
+        setPatients(pacientesMapeados);
+      } catch (error) {
+        console.error("Erro ao carregar pacientes:", error);
+        if (!isSilencioso)
+          showError("Não foi possível carregar a lista de pacientes.");
+      } finally {
+        if (!isSilencioso) setIsLoading(false);
       }
+    },
+    [showError],
+  );
 
-      setPatients(pacientesMapeados);
-    } catch (error) {
-      console.error("Erro ao carregar pacientes:", error);
-      showError("Não foi possível carregar a lista de pacientes.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
+  // Estratégia Definitiva: Espera a animação terminar e tenta buscar algumas vezes
   useFocusEffect(
     useCallback(() => {
-      carregarPacientes();
-    }, []),
+      let isActive = true;
+      let tentativas = 0;
+      const MAX_TENTATIVAS = 4;
+      let timerId: ReturnType<typeof setTimeout>;
+
+      const buscarComRetry = async () => {
+        if (!isActive) return;
+
+        await carregarPacientes(tentativas > 0); // Fica silencioso nas retentativas
+
+        // Se a lista continua vazia (banco ainda sincronizando pós-login), tenta de novo a cada 2s
+        if (isActive && tentativas < MAX_TENTATIVAS) {
+          tentativas++;
+          timerId = setTimeout(buscarComRetry, 2000);
+        }
+      };
+
+      // Só inicia a busca APÓS a tela terminar de abrir
+      const task = InteractionManager.runAfterInteractions(() => {
+        buscarComRetry();
+      });
+
+      return () => {
+        isActive = false;
+        task.cancel();
+        if (timerId) clearTimeout(timerId);
+      };
+    }, [carregarPacientes]),
   );
+
+  // Função para o Pull-to-Refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await carregarPacientes(true);
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     if (params.cpfBuscaInicial) {
@@ -123,21 +173,17 @@ export default function HomePage() {
   const filteredPatients = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase("pt-BR");
 
-    // LÓGICA CORRIGIDA AQUI
     if (!normalizedSearch) {
-      // 1. Filtra apenas pacientes que possuem data de última avaliação
       const avaliadosRecentemente = patients.filter(
         (patient) => patient.ultima_avaliacao != null,
       );
 
-      // 2. Ordena da avaliação mais recente para a mais antiga
       avaliadosRecentemente.sort((a, b) => {
         const dataA = new Date(a.ultima_avaliacao as string).getTime();
         const dataB = new Date(b.ultima_avaliacao as string).getTime();
         return dataB - dataA;
       });
 
-      // 3. Retorna os 5 primeiros
       return avaliadosRecentemente.slice(0, 5);
     }
 
@@ -155,7 +201,6 @@ export default function HomePage() {
     });
   }, [patients, search]);
 
-  // Funções de controle da Animação do Modal
   function abrirModal(paciente: PacienteMapeado) {
     setPacienteSelecionado(paciente);
     setModalVisible(true);
@@ -241,6 +286,14 @@ export default function HomePage() {
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#A21CAF"]}
+              tintColor="#A21CAF"
+            />
+          }
           ListHeaderComponent={() => (
             <Text style={styles.listSectionTitle}>
               {search.length > 0
@@ -295,7 +348,6 @@ export default function HomePage() {
             </Pressable>
           )}
           ListEmptyComponent={() => {
-            // LÓGICA DE EMPTY STATE CORRIGIDA AQUI
             if (search.length > 0) {
               return (
                 <View style={styles.notFoundCard}>
@@ -325,11 +377,13 @@ export default function HomePage() {
               );
             }
 
-            // Exibição quando não há busca E não há pacientes avaliados recentemente
             return (
               <View style={[styles.notFoundCard, { borderColor: "#E2E8F0" }]}>
-                <Text style={[styles.notFoundText, { marginBottom: 0 }]}>
+                <Text style={[styles.notFoundText, { marginBottom: 8 }]}>
                   Nenhuma avaliação recente encontrada.
+                </Text>
+                <Text style={{ fontSize: 13, color: "#94A3B8" }}>
+                  Puxe para baixo para atualizar
                 </Text>
               </View>
             );
@@ -340,7 +394,6 @@ export default function HomePage() {
       {modalVisible && (
         <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={fecharModal} />
-
           <View
             style={[
               styles.modalContent,
@@ -348,7 +401,6 @@ export default function HomePage() {
             ]}
           >
             <View style={styles.modalDragHandle} />
-
             <Text style={styles.modalTitle}>Confirmação de Identidade</Text>
             <Text style={styles.modalSubtitle}>
               Verifique os dados antes de iniciar o rastreio cognitivo.
@@ -430,17 +482,9 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 16,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#1F2937",
-  },
-  searchLoading: {
-    marginTop: 30,
-  },
-  listContent: {
-    paddingBottom: 40,
-  },
+  searchInput: { flex: 1, fontSize: 16, color: "#1F2937" },
+  searchLoading: { marginTop: 30 },
+  listContent: { paddingBottom: 40 },
   listSectionTitle: {
     fontSize: 14,
     fontWeight: "600",
@@ -461,34 +505,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
-  cardPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
-  },
+  cardPressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 10,
   },
-  patientName: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#1F2A44",
-    flex: 1,
-  },
-  cardBody: {
-    gap: 4,
-    marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 14,
-    color: "#445066",
-  },
-  infoLabel: {
-    fontWeight: "700",
-    color: "#1F2A44",
-  },
+  patientName: { fontSize: 17, fontWeight: "800", color: "#1F2A44", flex: 1 },
+  cardBody: { gap: 4, marginBottom: 12 },
+  infoText: { fontSize: 14, color: "#445066" },
+  infoLabel: { fontWeight: "700", color: "#1F2A44" },
   cardFooter: {
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
@@ -497,12 +524,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  actionText: {
-    color: "#A21CAF",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-
+  actionText: { color: "#A21CAF", fontWeight: "700", fontSize: 14 },
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.4)",
@@ -546,14 +568,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 8,
   },
-  identityText: {
-    fontSize: 15,
-    color: "#445066",
-  },
-  identityLabel: {
-    fontWeight: "800",
-    color: "#1F2A44",
-  },
+  identityText: { fontSize: 15, color: "#445066" },
+  identityLabel: { fontWeight: "800", color: "#1F2A44" },
   startButton: {
     borderRadius: 16,
     minHeight: 56,
@@ -568,22 +584,14 @@ const styles = StyleSheet.create({
     elevation: 4,
     width: "100%",
   },
-  startButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "800",
-  },
+  startButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
   cancelButton: {
     paddingTop: 16,
     marginTop: 8,
     width: "100%",
     alignItems: "center",
   },
-  cancelText: {
-    color: "#6C63FF",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+  cancelText: { color: "#6C63FF", fontSize: 15, fontWeight: "600" },
   notFoundCard: {
     marginTop: 8,
     backgroundColor: "#FFFFFF",
@@ -593,21 +601,14 @@ const styles = StyleSheet.create({
     borderColor: "#E9D5FF",
     alignItems: "center",
   },
-  notFoundText: {
-    fontSize: 15,
-    color: "#5B657C",
-    marginBottom: 14,
-  },
+  notFoundText: { fontSize: 15, color: "#5B657C", textAlign: "center" },
   notFoundButton: {
     borderRadius: 12,
     minHeight: 48,
     paddingHorizontal: 20,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 14,
   },
-  notFoundButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "800",
-  },
+  notFoundButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
 });
