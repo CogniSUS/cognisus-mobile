@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type GuideStep = {
@@ -50,7 +50,7 @@ const meemSteps: GuideStep[] = [
     id: "5",
     title: "Atenção e cálculo",
     content:
-      "Solicite ao participante que realize as subtrações sucessivas apresentadas. Forneça apenas a instrução inicial, sem auxiliar nos cálculos ou indicar se as respostas estão corretas.",
+      "Solicite ao participante que realize as subtrações sucessivas apresentadas. Forneça apenas a instrução inicial, sem auxiliar nos cálculos ou indicar se as respostas estão corretas. Caso o paciente não conseguir se sair bem nesta prova, peça a ele que soletre a palavra “mundo” de trás para frente.",
     icon: "calculator-outline",
   },
   {
