@@ -1,33 +1,37 @@
 import { useLogout } from "@/hooks/useLogout";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-} from "react-native";
+import { useNetInfo } from "@react-native-community/netinfo";
+import { Pressable, StyleSheet, Text } from "react-native";
 
 export function LogoutButton() {
   const { logout, isLoggingOut } = useLogout();
+  const netInfo = useNetInfo();
+
+  const isOffline = netInfo.isConnected === false;
+  const isDisabled = isLoggingOut || isOffline;
 
   return (
     <Pressable
       style={({ pressed }) => [
         styles.button,
-        pressed && styles.pressed,
+        isOffline && styles.buttonDisabled,
+        pressed && !isDisabled && styles.pressed,
       ]}
       onPress={logout}
-      disabled={isLoggingOut}
+      disabled={isDisabled}
     >
       <Ionicons
         name="log-out-outline"
         size={19}
-        color="#EF4444"
+        color={isOffline ? "#9CA3AF" : "#EF4444"}
       />
 
-      <Text style={styles.text}>
+      <Text style={[styles.text, isOffline && styles.textDisabled]}>
         {isLoggingOut
           ? "Saindo..."
-          : "Sair do Aplicativo"}
+          : isOffline
+            ? "Sair (Sem conexão)"
+            : "Sair do Aplicativo"}
       </Text>
     </Pressable>
   );
@@ -46,14 +50,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-
+  buttonDisabled: {
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F3F4F6",
+  },
   pressed: {
     opacity: 0.8,
   },
-
   text: {
     color: "#EF4444",
     fontSize: 14,
     fontWeight: "500",
+  },
+  textDisabled: {
+    color: "#9CA3AF",
   },
 });

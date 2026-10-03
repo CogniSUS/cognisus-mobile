@@ -3,6 +3,7 @@ import { QuestionCard } from "@/components/ui/question-card";
 import { TestAbandonModal } from "@/components/ui/test-abandon-modal";
 import { TestHeader } from "@/components/ui/test-header";
 import { TestInstruction } from "@/components/ui/test-instruction";
+import { TimerCard } from "@/components/ui/time-card";
 import { meemSteps } from "@/constants/meem";
 import { database } from "@/database/database";
 import { AvaliacaoTesteMeem } from "@/database/models/AvaliacaoTesteMeem";
@@ -367,6 +368,13 @@ export default function TestExecutePage() {
                 instruction={activeInstruction}
                 isIntro={step.isIntro}
               />
+
+              {step.hasTimer && (
+                <TimerCard
+                  key={`timer-${step.id}`}
+                  amountOfTime={step.amountOfTime || 60}
+                />
+              )}
 
               {step.alternativeQuestions && (
                 <View style={styles.toggleContainer}>
