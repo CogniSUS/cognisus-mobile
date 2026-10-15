@@ -8,6 +8,7 @@
     "scheme": "cognisusmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "owner": "cognisus",
     "ios": {
       "supportsTablet": true
     },
@@ -19,7 +20,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.italochiaradia.cognisusmobile"
     },
     "web": {
       "bundler": "metro",
@@ -45,6 +47,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "dcab8c74-c418-4bc7-bd41-08a26702bf0f"
+      }
     }
   }
 }
